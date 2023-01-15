@@ -20,6 +20,8 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+use libc::timespec;
+
 
 const IPD_CHANGE_EPS: f32 = 0.001;
 
@@ -191,7 +193,7 @@ fn streaming_input_loop(ctx: StreamingInputContext) {
             .sync_actions(&[(&ctx.interaction_context.action_set).into()])
             .unwrap();
 
-        let now = to_duration(ctx.xr_instance.now().unwrap());
+        let now = to_duration(xr_now());
 
         let target_timestamp = now + alvr_client_core::get_head_prediction_offset();
 
@@ -646,7 +648,7 @@ pub fn entry_point() {
             swapchains[1].release_image().unwrap();
 
             let vsync_queue = Duration::from_nanos(
-                (frame_state.predicted_display_time - xr_instance.now().unwrap()).as_nanos() as _,
+               (frame_state.predicted_display_time - xr_now()).as_nanos() as _
             );
             alvr_client_core::report_submit(timestamp, vsync_queue);
         } else {
@@ -737,6 +739,15 @@ pub fn entry_point() {
         xr_frame_stream,
         lobby_swapchains,
     ));
+}
+
+#[inline]
+fn xr_now() -> xr::Time {
+    let mut ts_now = timespec{ tv_sec: 0, tv_nsec: 0 };
+    unsafe {
+        libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut ts_now);
+    }
+    xr::Time::from_nanos(ts_now.tv_sec * 1000000000 + ts_now.tv_nsec)
 }
 
 #[cfg(target_os = "android")]
