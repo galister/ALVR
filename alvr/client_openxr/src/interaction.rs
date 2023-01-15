@@ -32,15 +32,15 @@ pub struct ButtonBindingInfo {
 
 // The oculus touch controller is used as the universal binding for every platform. Given its
 // popularity, all OpenXR runtimes should support binding to the oculus touch controller.
-const OCULUS_TOUCH_CONTROLLER_PROFILE: &str = "/interaction_profiles/oculus/touch_controller";
+const OCULUS_TOUCH_CONTROLLER_PROFILE: &str = "/interaction_profiles/pico/neo3_controller";
 static OCULUS_TOUCH_CONTROLLER_BUTTON_BINDING_INFO: Lazy<HashMap<u64, ButtonBindingInfo>> =
     Lazy::new(|| {
         [
             (
                 *MENU_CLICK_ID,
                 ButtonBindingInfo {
-                    name: "menu_click".into(),
-                    binding_path: MENU_CLICK_PATH.into(),
+                    name: "back_click".into(),
+                    binding_path: BACK_CLICK_PATH.into(),
                     binding_type: BindingType::Binary,
                 },
             ),
