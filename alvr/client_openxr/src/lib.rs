@@ -279,13 +279,8 @@ pub fn entry_point() {
 
     let device_name = alvr_client_core::get_device_name();
 
-    let xr_entry = if device_name == "Quest" {
-        unsafe { xr::Entry::load_from(Path::new("libopenxr_loader_quest.so")).unwrap() }
-    } else if device_name.contains("Pico") || device_name == "A8150" {
-        unsafe { xr::Entry::load_from(Path::new("libopenxr_loader_pico.so")).unwrap() }
-    } else {
-        unsafe { xr::Entry::load().unwrap() }
-    };
+    info!("Hello, my name is {}", device_name);
+    let xr_entry = unsafe { xr::Entry::load_from(Path::new("libopenxr_loader_pico.so")).unwrap() };
 
     #[cfg(target_os = "android")]
     xr_entry.initialize_android_loader().unwrap();
