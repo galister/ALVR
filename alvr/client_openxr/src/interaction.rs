@@ -117,6 +117,14 @@ fn get_button_bindings(platform: Platform) -> HashMap<u64, ButtonBindingInfo> {
             },
         ),
         (
+            *LEFT_SQUEEZE_CLICK_ID,
+            ButtonBindingInfo {
+                name: "left_squeeze_click".into(),
+                binding_path: "/user/hand/left/input/squeeze".into(),
+                binding_type: BindingType::Binary,
+            },
+        ),
+        (
             *LEFT_TRIGGER_VALUE_ID,
             ButtonBindingInfo {
                 name: "left_trigger_value".into(),
@@ -129,6 +137,14 @@ fn get_button_bindings(platform: Platform) -> HashMap<u64, ButtonBindingInfo> {
             ButtonBindingInfo {
                 name: "left_trigger_touch".into(),
                 binding_path: LEFT_TRIGGER_TOUCH_PATH.into(),
+                binding_type: BindingType::Binary,
+            },
+        ),
+        (
+            *LEFT_TRIGGER_CLICK_ID,
+            ButtonBindingInfo {
+                name: "left_trigger_click".into(),
+                binding_path: "/user/hand/left/input/trigger".into(),
                 binding_type: BindingType::Binary,
             },
         ),
@@ -173,6 +189,14 @@ fn get_button_bindings(platform: Platform) -> HashMap<u64, ButtonBindingInfo> {
             },
         ),
         (
+            *RIGHT_SQUEEZE_CLICK_ID,
+            ButtonBindingInfo {
+                name: "right_squeeze_click".into(),
+                binding_path: "/user/hand/right/input/squeeze".into(),
+                binding_type: BindingType::Binary,
+            },
+        ),
+        (
             *RIGHT_TRIGGER_VALUE_ID,
             ButtonBindingInfo {
                 name: "right_trigger_value".into(),
@@ -185,6 +209,14 @@ fn get_button_bindings(platform: Platform) -> HashMap<u64, ButtonBindingInfo> {
             ButtonBindingInfo {
                 name: "right_trigger_touch".into(),
                 binding_path: RIGHT_TRIGGER_TOUCH_PATH.into(),
+                binding_type: BindingType::Binary,
+            },
+        ),
+        (
+            *RIGHT_TRIGGER_CLICK_ID,
+            ButtonBindingInfo {
+                name: "right_trigger_click".into(),
+                binding_path: "/user/hand/right/input/trigger".into(),
                 binding_type: BindingType::Binary,
             },
         ),
@@ -225,42 +257,10 @@ fn get_button_bindings(platform: Platform) -> HashMap<u64, ButtonBindingInfo> {
     if platform == Platform::Quest {
         list.extend([
             (
-                *LEFT_SQUEEZE_CLICK_ID,
-                ButtonBindingInfo {
-                    name: "left_squeeze_click".into(),
-                    binding_path: "/user/hand/left/input/squeeze".into(),
-                    binding_type: BindingType::Binary,
-                },
-            ),
-            (
-                *LEFT_TRIGGER_CLICK_ID,
-                ButtonBindingInfo {
-                    name: "left_trigger_click".into(),
-                    binding_path: "/user/hand/left/input/trigger".into(),
-                    binding_type: BindingType::Binary,
-                },
-            ),
-            (
                 *LEFT_THUMBREST_TOUCH_ID,
                 ButtonBindingInfo {
                     name: "left_thumbrest_touch".into(),
                     binding_path: LEFT_THUMBREST_TOUCH_PATH.into(),
-                    binding_type: BindingType::Binary,
-                },
-            ),
-            (
-                *RIGHT_SQUEEZE_CLICK_ID,
-                ButtonBindingInfo {
-                    name: "right_squeeze_click".into(),
-                    binding_path: "/user/hand/right/input/squeeze".into(),
-                    binding_type: BindingType::Binary,
-                },
-            ),
-            (
-                *RIGHT_TRIGGER_CLICK_ID,
-                ButtonBindingInfo {
-                    name: "right_trigger_click".into(),
-                    binding_path: "/user/hand/right/input/trigger".into(),
                     binding_type: BindingType::Binary,
                 },
             ),
