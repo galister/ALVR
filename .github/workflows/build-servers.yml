@@ -1,0 +1,105 @@
+name: Build servers
+
+on:
+ - workflow_dispatch
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_windows_server:
+    # Windows latest has Rust, Android NDK and LLVM already installed.
+    # https://github.com/actions/virtual-environments/blob/main/images/win/Windows2019-Readme.md
+    runs-on: windows-2019
+    env:
+      # For bindgen to find libclang.dll, we need to give it the path to the Visual Studio package.
+      # This is specific to the GitHub windows-2019 runner.
+      LIBCLANG_PATH: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\x64\bin'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: "galister/ALVR"
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: install zip unzip vulkan-sdk pkgconfiglite wixtoolset
+
+      - name: Build and package ALVR
+        id: build
+        env:
+          RUST_BACKTRACE: 1
+        run: |
+          cargo xtask prepare-deps --platform windows --ci
+          cargo xtask bump --nightly
+          cargo xtask package-server --gpl
+          $file = Get-ChildItem -Name .\build\*.exe | Select-Object -f 1
+          echo "::set-output name=exe_filename::$file"
+      # Upload artifacts
+      - name: Upload installer (exe)
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./build/${{ steps.build.outputs.exe_filename }}
+          name: ${{ steps.build.outputs.exe_filename }}
+      - name: Upload installer (msi)
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./build/alvr_server_windows.msi
+          name: alvr_server_windows.msi
+      - name: Upload portable server (zip)
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./build/alvr_server_windows.zip
+          name: alvr_server_windows.zip
+
+  build_linux_server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: "galister/ALVR"
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build and install dependencies
+        env:
+          RUST_BACKTRACE: 1
+        run: |
+          sudo add-apt-repository universe
+          sudo apt-get update
+          sudo apt-get install libfuse2 build-essential pkg-config nasm libva-dev libdrm-dev libvulkan-dev libx264-dev libx265-dev cmake libasound2-dev libjack-jackd2-dev libxrandr-dev libunwind-dev libffmpeg-nvenc-dev nvidia-cuda-toolkit
+          cp packaging/deb/cuda.pc /usr/share/pkgconfig
+          cargo xtask prepare-deps --platform linux
+      - name: Build and package ALVR
+        env:
+          RUST_BACKTRACE: 1
+        run: |
+          cargo xtask bump --nightly
+          cargo xtask package-server --local-ffmpeg
+      - name: Upload linux server
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./build/alvr_server_linux.tar.gz
+          name: alvr_server_linux.tar.gz
+      - name: Build and package ALVR (AppImage)
+        env:
+          RUST_BACKTRACE: 1
+        run: |
+          cargo xtask package-server --gpl --appimage --zsync
+      - name: Upload linux server (AppImage)
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./build/ALVR-x86_64.AppImage
+          name: ALVR-x86_64.AppImage
+      - name: Upload linux server (AppImage.zsync)
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./build/ALVR-x86_64.AppImage.zsync
+          name: ALVR-x86_64.AppImage.zsync
+
+
