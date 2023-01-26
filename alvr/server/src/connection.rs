@@ -87,8 +87,6 @@ pub fn handshake_loop() -> IntResult {
             let (client_hostname, client_ip) = match welcome_socket.recv_non_blocking() {
                 Ok(pair) => pair,
                 Err(e) => {
-                    debug!("UDP handshake packet listening: {e}");
-
                     thread::sleep(RETRY_CONNECT_MIN_INTERVAL);
                     continue;
                 }
