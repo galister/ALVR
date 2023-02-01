@@ -3,7 +3,7 @@ use alvr_common::{
     glam::{EulerRot, Quat, Vec3},
     HEAD_ID, LEFT_HAND_ID, RIGHT_HAND_ID,
 };
-use alvr_session::HeadsetDesc;
+use alvr_session::{HeadsetDesc, PositionRecenteringMode, RotationRecenteringMode};
 use alvr_sockets::{DeviceMotion, Pose};
 use settings_schema::Switch;
 use std::{
@@ -23,10 +23,14 @@ struct MotionConfig {
 
 pub struct TrackingManager {
     device_motion_configs: HashMap<u64, MotionConfig>,
+    position_recentering_mode: PositionRecenteringMode,
+    rotation_recentering_mode: RotationRecenteringMode,
+    last_head_pose: Pose,     // client's reference space
+    recentering_origin: Pose, // client's reference space
 }
 
 impl TrackingManager {
-    pub fn new(settings: HeadsetDesc) -> TrackingManager {
+    pub fn new(settings: &HeadsetDesc) -> TrackingManager {
         let mut device_motion_configs = HashMap::new();
         device_motion_configs.insert(*HEAD_ID, MotionConfig::default());
 
@@ -69,19 +73,65 @@ impl TrackingManager {
 
         TrackingManager {
             device_motion_configs,
+            position_recentering_mode: settings.position_recentering_mode,
+            rotation_recentering_mode: settings.rotation_recentering_mode,
+            last_head_pose: Pose::default(),
+            recentering_origin: Pose::default(),
         }
+    }
+
+    pub fn recenter(&mut self) {
+        self.recentering_origin.position = match self.position_recentering_mode {
+            PositionRecenteringMode::Disabled => Vec3::ZERO,
+            PositionRecenteringMode::LocalFloor => {
+                let mut pos = self.last_head_pose.position;
+                pos.y = 0.0;
+
+                pos
+            }
+            PositionRecenteringMode::Local { view_height } => {
+                self.last_head_pose.position - Vec3::new(0.0, view_height, 0.0)
+            }
+        };
+
+        self.recentering_origin.orientation = match self.rotation_recentering_mode {
+            RotationRecenteringMode::Disabled => Quat::IDENTITY,
+            RotationRecenteringMode::Yaw => {
+                let mut rot = self.last_head_pose.orientation;
+                // extract yaw rotation
+                rot.x = 0.0;
+                rot.z = 0.0;
+                rot = rot.normalize();
+
+                rot
+            }
+            RotationRecenteringMode::YawPitchRoll => self.last_head_pose.orientation,
+        };
     }
 
     // Performs all kinds of tracking transformations, driven by settings, and convert to ffi.
     pub fn transform_motions(
-        &self,
+        &mut self,
         device_motions: &[(u64, DeviceMotion)],
         left_hand_skeleton_enabled: bool,
         right_hand_skeleton_enabled: bool,
     ) -> Vec<FfiDeviceMotion> {
         let mut ffi_motions = vec![];
         for &(device_id, mut motion) in device_motions {
+            if device_id == *HEAD_ID {
+                self.last_head_pose = motion.pose;
+            }
+
             if let Some(config) = self.device_motion_configs.get(&device_id) {
+                // Recenter
+                let inverse_origin_orientation = self.recentering_origin.orientation.conjugate();
+                motion.pose.orientation = inverse_origin_orientation * motion.pose.orientation;
+                motion.pose.position = inverse_origin_orientation
+                    * (motion.pose.position - self.recentering_origin.position);
+                motion.linear_velocity = inverse_origin_orientation * motion.linear_velocity;
+                motion.angular_velocity = inverse_origin_orientation * motion.angular_velocity;
+
+                // then apply custom transform
                 if (device_id != *LEFT_HAND_ID || !left_hand_skeleton_enabled)
                     && (device_id != *RIGHT_HAND_ID || !right_hand_skeleton_enabled)
                 {
@@ -89,7 +139,7 @@ impl TrackingManager {
                     motion.pose.position += motion.pose.orientation * config.local_position_offset;
                     motion.linear_velocity = config.rotation_offset * motion.linear_velocity;
                     motion.angular_velocity = config.rotation_offset * motion.angular_velocity;
-                }
+                };
 
                 fn cutoff(v: Vec3, threshold: f32) -> Vec3 {
                     if v.length_squared() > threshold * threshold {
