@@ -77,7 +77,7 @@ OvrHmd::OvrHmd()
         Warn("Failed to register device");
     }
 
-    if (!Settings::Instance().m_disableController) {
+    if (m_deviceClass == vr::TrackedDeviceClass_HMD) {
         m_leftController = std::make_shared<OvrController>(LEFT_HAND_ID);
         ret = vr::VRServerDriverHost()->TrackedDeviceAdded(
             m_leftController->GetSerialNumber().c_str(),

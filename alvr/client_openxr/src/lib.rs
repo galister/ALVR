@@ -749,7 +749,7 @@ pub fn entry_point() {
                     [left_swapchain_idx, right_swapchain_idx],
                 );
 
-                if ! hardware_buffer.is_null() {
+                if !hardware_buffer.is_null() {
                     if let Some(now) = xr_runtime_now(&xr_instance, platform) {
                         alvr_client_core::report_submit(timestamp, vsync_time.saturating_sub(now));
                     }
