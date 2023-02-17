@@ -735,33 +735,38 @@ pub fn entry_point() {
                 let (timestamp, hardware_buffer) = if let Some(pair) = frame_result {
                     pair
                 } else {
-                    warn!("Timed out when waiting for frame!");
                     (vsync_time, ptr::null_mut())
                 };
 
                 let mut history_views = None;
-                for history_frame in &*views_history.lock() {
-                    if history_frame.timestamp == timestamp {
-                        history_views = Some(history_frame.views.clone());
-                    }
-                }
-
-                views = if let Some(views) = history_views {
-                    last_good_views = views.clone();
-                    views
-                } else {
-                    last_good_views.clone()
-                };
-
-                alvr_client_core::opengl::render_stream(
-                    hardware_buffer,
-                    [left_swapchain_idx, right_swapchain_idx],
-                );
-
                 if !hardware_buffer.is_null() {
+                    for history_frame in &*views_history.lock() {
+                        if history_frame.timestamp == timestamp {
+                            history_views = Some(history_frame.views.clone());
+                        }
+                    }
+                    views = if let Some(good_views) = history_views {
+                        last_good_views = good_views.clone();
+                        good_views
+                    } else {
+                        warn!("No views found for decoded frame!");
+                        last_good_views.clone()
+                    };
+
+                    alvr_client_core::opengl::render_stream(
+                        hardware_buffer,
+                        [left_swapchain_idx, right_swapchain_idx],
+                    );
+
                     if let Some(now) = xr_runtime_now(&xr_instance, platform) {
                         alvr_client_core::report_submit(timestamp, vsync_time.saturating_sub(now));
                     }
+                } else {
+                    views = last_good_views.clone();
+                    alvr_client_core::opengl::render_stream(
+                        ptr::null_mut(),
+                        [left_swapchain_idx, right_swapchain_idx],
+                    );
                 }
 
                 display_time = timestamp;
