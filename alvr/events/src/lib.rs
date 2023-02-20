@@ -1,14 +1,34 @@
-use alvr_common::prelude::*;
+use alvr_common::{log, prelude::*};
 use alvr_session::SessionDesc;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum EventSeverity {
     Error,
     Warning,
     Info,
     Debug,
+}
+
+impl EventSeverity {
+    pub fn from_log_level(level: log::Level) -> Self {
+        match level {
+            log::Level::Error => EventSeverity::Error,
+            log::Level::Warn => EventSeverity::Warning,
+            log::Level::Info => EventSeverity::Info,
+            log::Level::Debug | log::Level::Trace => EventSeverity::Debug,
+        }
+    }
+
+    pub fn into_log_level(self) -> log::Level {
+        match self {
+            EventSeverity::Error => log::Level::Error,
+            EventSeverity::Warning => log::Level::Warn,
+            EventSeverity::Info => log::Level::Info,
+            EventSeverity::Debug => log::Level::Debug,
+        }
+    }
 }
 
 // todo: remove some unused statistics

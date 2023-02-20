@@ -1,6 +1,6 @@
 use egui::{Layout, Ui};
 
-use crate::dashboard::{DashboardResponse, FirewallRulesResponse, SetupWizardResponse};
+use crate::dashboard::{DashboardRequest, FirewallRulesResponse, SetupWizardResponse};
 
 enum Page {
     Welcome,
@@ -22,7 +22,7 @@ impl SetupWizard {
         }
     }
 
-    pub fn ui(&mut self, ui: &mut Ui) -> Option<DashboardResponse> {
+    pub fn ui(&mut self, ui: &mut Ui) -> Option<DashboardRequest> {
         use Page::*;
         let mut response = None;
         ui.horizontal(|ui| {
@@ -32,7 +32,7 @@ impl SetupWizard {
             });
             ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.button("❌").clicked() {
-                    response = Some(DashboardResponse::SetupWizard(SetupWizardResponse::Close));
+                    response = Some(DashboardRequest::SetupWizard(SetupWizardResponse::Close));
                 }
             })
         });
@@ -58,7 +58,7 @@ To communicate with the headset, some firewall rules need to be set.
 This requires administrator rights!"#,
                 );
                 if ui.button("Add firewall rules").clicked() {
-                    response = Some(DashboardResponse::Firewall(FirewallRulesResponse::Add));
+                    response = Some(DashboardRequest::Firewall(FirewallRulesResponse::Add));
                 }
             }
             PerformancePreset => {
@@ -70,12 +70,12 @@ Please choose preset that fits your setup. This will adjust some settings for yo
                 ui.horizontal(|ui| {
                     // TODO correct preset strings
                     if ui.button("Compatibility").clicked() {
-                        response = Some(DashboardResponse::PresetInvocation(
+                        response = Some(DashboardRequest::PresetInvocation(
                             "compatibility".to_string(),
                         ));
                     }
                     if ui.button("Visual quality").clicked() {
-                        response = Some(DashboardResponse::PresetInvocation(
+                        response = Some(DashboardRequest::PresetInvocation(
                             "visual_quality".to_string(),
                         ));
                     }
@@ -135,7 +135,7 @@ You can always restart this setup wizard from the "Installation" tab on the left
                 }
                 Finished => {
                     if ui.button("Close").clicked() {
-                        response = Some(DashboardResponse::SetupWizard(SetupWizardResponse::Close));
+                        response = Some(DashboardRequest::SetupWizard(SetupWizardResponse::Close));
                     }
                     if ui.button("Back").clicked() {
                         self.page = Recommendations;

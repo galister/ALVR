@@ -1,5 +1,5 @@
 use crate::{
-    dashboard::{DashboardResponse, DriverResponse, FirewallRulesResponse, SetupWizardResponse},
+    dashboard::{DashboardRequest, DriverResponse, FirewallRulesResponse, SetupWizardResponse},
     theme,
 };
 use egui::{Frame, RichText, Ui};
@@ -11,18 +11,18 @@ impl InstallationTab {
         Self {}
     }
 
-    pub fn ui(&self, ui: &mut Ui, drivers: &Vec<String>) -> Option<DashboardResponse> {
+    pub fn ui(&self, ui: &mut Ui, drivers: &Vec<String>) -> Option<DashboardRequest> {
         let mut response = None;
         ui.vertical(|ui| {
             if ui.button("Run setup wizard").clicked() {
-                response = Some(DashboardResponse::SetupWizard(SetupWizardResponse::Start));
+                response = Some(DashboardRequest::SetupWizard(SetupWizardResponse::Start));
             }
             ui.horizontal(|ui| {
                 if ui.button("Add firewall rules").clicked() {
-                    response = Some(DashboardResponse::Firewall(FirewallRulesResponse::Add));
+                    response = Some(DashboardRequest::Firewall(FirewallRulesResponse::Add));
                 }
                 if ui.button("Remove firewall rules").clicked() {
-                    response = Some(DashboardResponse::Firewall(FirewallRulesResponse::Remove));
+                    response = Some(DashboardRequest::Firewall(FirewallRulesResponse::Remove));
                 }
             });
             Frame::group(ui.style())
@@ -33,7 +33,7 @@ impl InstallationTab {
                         ui.horizontal(|ui| {
                             ui.label(driver);
                             if ui.button("Remove").clicked() {
-                                response = Some(DashboardResponse::Driver(
+                                response = Some(DashboardRequest::Driver(
                                     DriverResponse::Unregister(driver.to_owned()),
                                 ));
                             }
@@ -41,7 +41,7 @@ impl InstallationTab {
                     }
                 });
             if ui.button("Register ALVR driver").clicked() {
-                response = Some(DashboardResponse::Driver(DriverResponse::RegisterAlvr));
+                response = Some(DashboardRequest::Driver(DriverResponse::RegisterAlvr));
             }
         });
         response

@@ -2,7 +2,7 @@ mod commands;
 
 use std::{sync::mpsc, thread, time::Duration};
 
-use crate::WorkerMsg;
+use crate::ServerEvent;
 
 pub fn launch() {
     if alvr_common::show_err(commands::maybe_register_alvr_driver()).is_some() {

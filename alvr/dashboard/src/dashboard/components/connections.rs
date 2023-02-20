@@ -1,4 +1,4 @@
-use crate::{dashboard::ConnectionsResponse, dashboard::DashboardResponse, theme};
+use crate::{dashboard::ConnectionsRequest, dashboard::DashboardRequest, theme};
 use alvr_session::{ClientConnectionDesc, SessionDesc};
 use egui::{Align, Frame, Layout, Resize, RichText, Ui, Window};
 use std::{
@@ -23,7 +23,7 @@ impl ConnectionsTab {
         }
     }
 
-    pub fn ui(&mut self, ui: &mut Ui, session: &SessionDesc) -> Option<DashboardResponse> {
+    pub fn ui(&mut self, ui: &mut Ui, session: &SessionDesc) -> Option<DashboardRequest> {
         let mut response = None;
 
         // Get the different types of clients from the session
@@ -69,8 +69,8 @@ impl ConnectionsTab {
                             });
                         }
                         if ui.button("Remove").clicked() {
-                            response = Some(DashboardResponse::Connections(
-                                ConnectionsResponse::RemoveEntry(name.clone()),
+                            response = Some(DashboardRequest::UpdateClientList(
+                                ConnectionsRequest::RemoveEntry(name.clone()),
                             ));
                         }
                     });
@@ -87,8 +87,8 @@ impl ConnectionsTab {
                         if ui.button("Trust").clicked() {
                             let mut client_desc = client_desc.clone();
                             client_desc.trusted = true;
-                            response = Some(DashboardResponse::Connections(
-                                ConnectionsResponse::AddOrUpdate {
+                            response = Some(DashboardRequest::UpdateClientList(
+                                ConnectionsRequest::AddOrUpdate {
                                     name: name.clone(),
                                     client_desc: client_desc.clone(),
                                 },
@@ -151,8 +151,8 @@ impl ConnectionsTab {
                                     ip_addresses.insert(addr);
                                 }
 
-                                response = Some(DashboardResponse::Connections(
-                                    ConnectionsResponse::AddOrUpdate {
+                                response = Some(DashboardRequest::UpdateClientList(
+                                    ConnectionsRequest::AddOrUpdate {
                                         name: state.hostname.clone(),
                                         client_desc: ClientConnectionDesc {
                                             display_name: state.display_name.clone(),

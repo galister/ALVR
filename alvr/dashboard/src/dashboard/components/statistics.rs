@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::{dashboard::theme::graph_colors, dashboard::DashboardResponse};
+use crate::{dashboard::theme::graph_colors, dashboard::DashboardRequest};
 use alvr_events::{GraphStatistics, Statistics};
 use egui::{
     emath,
@@ -36,7 +36,7 @@ impl StatisticsTab {
         self.history.push_front(statistics);
     }
 
-    pub fn ui(&mut self, ui: &mut Ui) -> Option<DashboardResponse> {
+    pub fn ui(&mut self, ui: &mut Ui) -> Option<DashboardRequest> {
         ui.vertical(|ui| {
             self.draw_latency_graph(ui);
             self.draw_fps_graph(ui);

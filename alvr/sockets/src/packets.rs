@@ -2,9 +2,10 @@ use alvr_common::{
     glam::{Quat, UVec2, Vec2, Vec3},
     Fov,
 };
-use alvr_events::{ButtonValue, EventSeverity};
+use alvr_events::{ButtonValue, EventSeverity, LogEvent};
+use alvr_session::SessionDesc;
 use serde::{Deserialize, Serialize};
-use std::{net::IpAddr, time::Duration};
+use std::{net::IpAddr, time::Duration, path::PathBuf};
 
 pub const TRACKING: u16 = 0;
 pub const HAPTICS: u16 = 1;
@@ -134,7 +135,7 @@ pub enum PathSegment {
     Index(usize),
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ClientListAction {
     AddIfMissing,
     SetDisplayName(String),
@@ -154,4 +155,20 @@ pub struct ClientStatistics {
     pub rendering: Duration,
     pub vsync_queue: Duration,
     pub total_pipeline_latency: Duration,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum DashboardRequest {
+    UpdateClientList {
+        hostname: String,
+        action: ClientListAction,
+    },
+    SessionUpdated(Box<SessionDesc>),
+    ExecuteScript(String),
+    // RegisterAlvrDriver,
+    // UnregisterDriver(PathBuf),
+    // AddFirewallRules,
+    // RemoveFirewallRules,
+    RestartSteamVR,
+    Log(LogEvent),
 }

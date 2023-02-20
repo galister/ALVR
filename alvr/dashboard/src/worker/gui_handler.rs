@@ -1,17 +1,17 @@
-use alvr_dashboard::dashboard::{DashboardResponse, DriverResponse, FirewallRulesResponse};
+use alvr_dashboard::dashboard::{DashboardRequest, DriverResponse, FirewallRulesResponse};
 
-use crate::{GuiMsg, WorkerMsg};
+use crate::{DashboardEvent, ServerEvent};
 
 use super::BASE_URL;
 
 pub async fn handle_msg(
-    msg: GuiMsg,
+    msg: DashboardEvent,
     client: &reqwest::Client,
-    tx1: &std::sync::mpsc::Sender<WorkerMsg>,
+    tx1: &std::sync::mpsc::Sender<ServerEvent>,
 ) -> reqwest::Result<bool> {
     Ok(match msg {
-        GuiMsg::Quit => true,
-        GuiMsg::GetSession => {
+        DashboardEvent::Quit => true,
+        DashboardEvent::GetSession => {
             let response = client
                 .get(format!("{}/api/session/load", BASE_URL))
                 .send()
@@ -27,15 +27,15 @@ pub async fn handle_msg(
             };
 
             // Discarded as the receiving end will always be valid, and when it is not the dashboard is shutting down anyway
-            let _ = tx1.send(WorkerMsg::SessionResponse(session));
+            let _ = tx1.send(ServerEvent::Session(session));
             false
         }
-        GuiMsg::GetDrivers => {
+        DashboardEvent::GetDrivers => {
             get_drivers(client, tx1).await?;
             false
         }
-        GuiMsg::Dashboard(response) => match response {
-            DashboardResponse::SessionUpdated(session) => {
+        DashboardEvent::Dashboard(response) => match response {
+            DashboardRequest::SessionUpdated(session) => {
                 let text = serde_json::to_string(&session).unwrap();
                 client
                     .get(format!("{}/api/session/store", BASE_URL))
@@ -44,14 +44,14 @@ pub async fn handle_msg(
                     .await?;
                 false
             }
-            DashboardResponse::RestartSteamVR => {
+            DashboardRequest::RestartSteamVR => {
                 client
                     .get(format!("{}/restart-steamvr", BASE_URL))
                     .send()
                     .await?;
                 false
             }
-            DashboardResponse::Driver(driver) => match driver {
+            DashboardRequest::Driver(driver) => match driver {
                 DriverResponse::RegisterAlvr => {
                     client
                         .get(format!("{}/api/driver/register", BASE_URL))
@@ -71,7 +71,7 @@ pub async fn handle_msg(
                     false
                 }
             },
-            DashboardResponse::Firewall(firewall) => match firewall {
+            DashboardRequest::Firewall(firewall) => match firewall {
                 FirewallRulesResponse::Add => {
                     client
                         .get(format!("{}/api/firewall-rules/add", BASE_URL))
@@ -95,7 +95,7 @@ pub async fn handle_msg(
 // Some functions to reduce code duplication
 async fn get_drivers(
     client: &reqwest::Client,
-    tx1: &std::sync::mpsc::Sender<WorkerMsg>,
+    tx1: &std::sync::mpsc::Sender<ServerEvent>,
 ) -> reqwest::Result<()> {
     let response = client
         .get(format!("{}/api/driver/list", BASE_URL))
@@ -112,7 +112,7 @@ async fn get_drivers(
     };
 
     // If this errors out, the GUI thread has already exited anyway and the worker will as well so it is safe to discard the error
-    let _ = tx1.send(WorkerMsg::DriverResponse(vec));
+    let _ = tx1.send(ServerEvent::DriverResponse(vec));
 
     Ok(())
 }

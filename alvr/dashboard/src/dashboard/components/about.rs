@@ -1,4 +1,4 @@
-use crate::dashboard::DashboardResponse;
+use crate::dashboard::DashboardRequest;
 use alvr_session::SessionDesc;
 use egui::{RichText, Ui};
 
@@ -9,7 +9,7 @@ impl AboutTab {
         Self {}
     }
 
-    pub fn ui(&self, ui: &mut Ui, session: &SessionDesc) -> Option<DashboardResponse> {
+    pub fn ui(&self, ui: &mut Ui, session: &SessionDesc) -> Option<DashboardRequest> {
         ui.label(RichText::new(&format!("ALVR server {}", session.server_version)).size(30.0));
         ui.label(
 r#"Stream VR games from your PC to your headset via Wi-Fi.

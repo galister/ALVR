@@ -370,7 +370,7 @@ fn try_connect(
         enable_vive_tracker_proxy: settings.headset.enable_vive_tracker_proxy,
         aggressive_keyframe_resend: settings.connection.aggressive_keyframe_resend,
         adapter_index: settings.video.adapter_index,
-        codec: matches!(settings.video.codec, CodecType::HEVC) as _,
+        codec: matches!(settings.video.codec, CodecType::Hevc) as _,
         rate_control_mode: settings.video.rate_control_mode as u32,
         filler_data: settings.video.filler_data,
         entropy_coding: settings.video.entropy_coding as u32,

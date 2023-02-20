@@ -1,7 +1,6 @@
 mod bitrate;
 mod buttons;
 mod connection;
-mod dashboard;
 mod haptics;
 mod logging_backend;
 mod sockets;
@@ -62,7 +61,6 @@ static SERVER_DATA_MANAGER: Lazy<RwLock<ServerDataManager>> =
     Lazy::new(|| RwLock::new(ServerDataManager::new(&FILESYSTEM_LAYOUT.session())));
 static WEBSERVER_RUNTIME: Lazy<Mutex<Option<Runtime>>> =
     Lazy::new(|| Mutex::new(Runtime::new().ok()));
-static WINDOW: Lazy<Mutex<Option<Arc<WindowType>>>> = Lazy::new(|| Mutex::new(None));
 
 static STATISTICS_MANAGER: Lazy<Mutex<Option<StatisticsManager>>> = Lazy::new(|| Mutex::new(None));
 static BITRATE_MANAGER: Lazy<Mutex<BitrateManager>> = Lazy::new(|| {
@@ -197,13 +195,6 @@ pub fn shutdown_runtimes() {
     // Shutsdown all connection runtimes
     IS_ALIVE.set(false);
 
-    if let Some(window_type) = WINDOW.lock().take() {
-        match window_type.as_ref() {
-            WindowType::Alcro(window) => window.close(),
-            WindowType::Browser => (),
-        }
-    }
-
     WEBSERVER_RUNTIME.lock().take();
 }
 
@@ -234,13 +225,8 @@ pub fn notify_application_update() {
 
 fn init() {
     let (log_sender, _) = broadcast::channel(web_server::WS_BROADCAST_CAPACITY);
-    let (legacy_events_sender, _) = broadcast::channel(web_server::WS_BROADCAST_CAPACITY);
     let (events_sender, _) = broadcast::channel(web_server::WS_BROADCAST_CAPACITY);
-    logging_backend::init_logging(
-        log_sender.clone(),
-        legacy_events_sender.clone(),
-        events_sender.clone(),
-    );
+    logging_backend::init_logging(log_sender.clone(), events_sender.clone());
 
     if let Some(runtime) = WEBSERVER_RUNTIME.lock().as_mut() {
         // Acquire and drop the data manager lock to create session.json if not present
@@ -262,11 +248,8 @@ fn init() {
 
         runtime.spawn(alvr_common::show_err_async(web_server::web_server(
             log_sender,
-            legacy_events_sender,
             events_sender,
         )));
-
-        thread::spawn(|| alvr_common::show_err(dashboard::ui_thread()));
     }
 
     {

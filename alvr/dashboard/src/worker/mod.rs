@@ -9,14 +9,14 @@ use tokio::sync::{
 };
 use tokio_tungstenite::{connect_async, tungstenite};
 
-use crate::{GuiMsg, WorkerMsg};
+use crate::{DashboardEvent, ServerEvent};
 
 const BASE_URL: &str = "http://localhost:8082";
 const BASE_WS_URL: &str = "ws://localhost:8082";
 
 pub fn http_thread(
-    tx1: std::sync::mpsc::Sender<WorkerMsg>,
-    rx2: std::sync::mpsc::Receiver<GuiMsg>,
+    tx1: std::sync::mpsc::Sender<ServerEvent>,
+    rx2: std::sync::mpsc::Receiver<DashboardEvent>,
 ) {
     tokio::runtime::Runtime::new().unwrap().block_on(async {
         let client = reqwest::Client::builder().build().unwrap();
@@ -39,7 +39,7 @@ pub fn http_thread(
                             broadcast_tx.subscribe(),
                         ));
                         event_rx = Some(_event_rx);
-                        let _ = tx1.send(WorkerMsg::Connected);
+                        let _ = tx1.send(ServerEvent::Connected);
                         connected = true;
                     }
                 }
@@ -49,12 +49,12 @@ pub fn http_thread(
 
                     // We still check for the exit signal from the Gui thread
                     for msg in rx2.try_iter() {
-                        if let GuiMsg::Quit = msg {
+                        if let DashboardEvent::Quit = msg {
                             break 'main;
                         }
                     }
 
-                    let _ = tx1.send(WorkerMsg::LostConnection(format!("{}", why)));
+                    let _ = tx1.send(ServerEvent::LostConnection(format!("{}", why)));
                 }
             }
 
@@ -67,7 +67,7 @@ pub fn http_thread(
             loop {
                 match event_rx.as_mut().unwrap().try_recv() {
                     Ok(event) => {
-                        let _ = tx1.send(WorkerMsg::Event(event));
+                        let _ = tx1.send(ServerEvent::Event(event));
                     }
                     Err(TryRecvError::Empty) => break,
                     Err(why) => {
@@ -87,7 +87,7 @@ pub fn http_thread(
                     Err(why) => {
                         let _ = broadcast_tx.send(());
                         connected = false;
-                        let _ = tx1.send(WorkerMsg::LostConnection(format!("{}", why)));
+                        let _ = tx1.send(ServerEvent::LostConnection(format!("{}", why)));
                     }
                 }
             }
