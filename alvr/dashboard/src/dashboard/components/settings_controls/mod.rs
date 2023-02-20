@@ -33,7 +33,6 @@ use serde_json as json;
 use settings_schema::SchemaNode;
 use std::sync::{atomic::AtomicUsize, Arc};
 
-
 // fn get_id() -> usize {
 //     static COUNTER: AtomicUsize = AtomicUsize::new(0);
 

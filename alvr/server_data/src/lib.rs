@@ -55,6 +55,7 @@ pub struct ServerDataManager {
     settings: Settings,
     session_path: PathBuf,
     script_engine: rhai::Engine,
+    gpu_infos: Vec<AdapterInfo>,
 }
 
 impl ServerDataManager {

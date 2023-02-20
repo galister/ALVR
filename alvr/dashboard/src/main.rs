@@ -5,8 +5,8 @@ mod data_sources;
 mod launcher;
 mod theme;
 
-use alvr_sockets::DashboardRequest;
-use dashboard::{ALVRDashboard, Dashboard};
+use alvr_sockets::{DashboardRequest, ServerResponse};
+use dashboard::Dashboard;
 use std::{
     sync::{mpsc, Arc},
     thread,
@@ -14,10 +14,11 @@ use std::{
 };
 
 pub enum ServerEvent {
+    PingResponseConnected,
+    PingResponseDisconnected,
     Event(alvr_events::Event),
-    DriverResponse(Vec<String>),
-    LostConnection(String),
-    Connected,
+    AudioOutputDevices(Vec<String>),
+    AudioInputDevices(Vec<String>),
 }
 
 // fn dashboard_requests_thread(receiver: mpsc::Receiver<DashboardRequest>, sender: mpsc::Sender<ServerEvent>) {
@@ -34,9 +35,9 @@ fn main() {
     env_logger::init();
     let native_options = eframe::NativeOptions::default();
 
-    let (server_event_sender, server_event_receiver) = mpsc::channel::<ServerEvent>();
     let (dashboard_request_sender, dashboard_request_receiver) =
         mpsc::channel::<DashboardRequest>();
+    let (server_event_sender, server_event_receiver) = mpsc::channel::<ServerEvent>();
 
     let data_thread = thread::spawn(|| {
         data_sources::data_interop_thread(dashboard_request_receiver, server_event_sender)
@@ -45,7 +46,7 @@ fn main() {
         "ALVR Dashboard",
         native_options,
         Box::new(|creation_context| {
-            Box::new(ALVRDashboard::new(
+            Box::new(Dashboard::new(
                 creation_context,
                 dashboard_request_sender,
                 server_event_receiver,

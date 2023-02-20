@@ -1,8 +1,5 @@
 // use super::{Section, SettingsContext, SettingsResponse};
-use crate::{
-    dashboard::{basic_components, DashboardRequest},
-    DisplayString,
-};
+use crate::dashboard::{basic_components, DashboardRequest};
 use alvr_session::{SessionDesc, SessionSettings};
 use egui::Ui;
 use egui_extras::{Column, Table, TableBuilder, TableRow};
@@ -16,7 +13,7 @@ pub struct SettingsTab {
 }
 
 impl SettingsTab {
-    pub fn new(session_settings: &SessionSettings) -> Self {
+    pub fn new() -> Self {
         // let schema = alvr_session::settings_schema(alvr_session::session_settings_default());
         // let mut session = json::from_value::<HashMap<String, json::Value>>(
         //     json::to_value(session_settings).unwrap(),

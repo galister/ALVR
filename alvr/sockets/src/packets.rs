@@ -5,7 +5,7 @@ use alvr_common::{
 use alvr_events::{ButtonValue, EventSeverity, LogEvent};
 use alvr_session::SessionDesc;
 use serde::{Deserialize, Serialize};
-use std::{net::IpAddr, time::Duration, path::PathBuf};
+use std::{net::IpAddr, time::Duration};
 
 pub const TRACKING: u16 = 0;
 pub const HAPTICS: u16 = 1;
@@ -159,16 +159,23 @@ pub struct ClientStatistics {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum DashboardRequest {
+    Ping,
+    GetSession,
+    UpdateSession(Box<SessionDesc>),
+    ExecuteScript(String),
     UpdateClientList {
         hostname: String,
         action: ClientListAction,
     },
-    SessionUpdated(Box<SessionDesc>),
-    ExecuteScript(String),
-    // RegisterAlvrDriver,
-    // UnregisterDriver(PathBuf),
-    // AddFirewallRules,
-    // RemoveFirewallRules,
+    GetAudioOutputDevices,
+    GetAudioInputDevices,
     RestartSteamVR,
     Log(LogEvent),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ServerResponse {
+    Ok,
+    AudioOutputDevices(Vec<String>),
+    AudioInputDevices(Vec<String>),
 }

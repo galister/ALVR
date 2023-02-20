@@ -1,60 +1,191 @@
 use crate::ServerEvent;
-use alvr_common::once_cell::sync::Lazy;
-use alvr_filesystem::{self as afs, Layout};
+use alvr_common::{parking_lot::Mutex, prelude::*, StrResult};
+use alvr_events::{Event, EventType};
 use alvr_server_data::ServerDataManager;
-use alvr_sockets::DashboardRequest;
-use std::{sync::mpsc, thread, time::Duration};
+use alvr_sockets::{DashboardRequest, ServerResponse};
+use std::{
+    env,
+    sync::{mpsc, Arc},
+    thread,
+    time::Duration,
+};
 
-// Abstraction layer between local and remote interaction with server IO functions
-// struct ServerConnection {
-
-// }
-
-// impl ServerConnection {
-//     fn new() {
-
-//     }
-// }
+enum DataSource {
+    Local(ServerDataManager),
+    Remote, // Note: the remote (server) is probably living as a separate process in the same PC
+}
 
 pub fn data_interop_thread(
     receiver: mpsc::Receiver<DashboardRequest>,
     sender: mpsc::Sender<ServerEvent>,
 ) {
-    // Note: this is an instance to the server IO manager. To make sure there is one and only ground
-    // truth for the data, prefer querying the server if it's alive.
+    let session_file_path =
+        alvr_filesystem::filesystem_layout_from_launcher_exe(&env::current_exe().unwrap())
+            .session();
 
-    let session_file_path = afs::filesystem_layout_from_openvr_driver_root_dir(
-        &alvr_commands::get_driver_dir().unwrap(),
-    )
-    .session();
+    let server_data_manager = ServerDataManager::new(&session_file_path);
 
-    let mut server_data_manager = Some(ServerDataManager::new(&session_file_path));
+    let port = server_data_manager.settings().connection.web_server_port;
 
-    let port = server_data_manager
-        .unwrap()
-        .settings()
-        .connection
-        .web_server_port;
+    let data_source = Arc::new(Mutex::new(DataSource::Local(server_data_manager)));
+
+    let events_thread = thread::spawn({
+        let sender = sender.clone();
+        move || -> StrResult {
+            loop {
+                let mut ws =
+                    match tungstenite::connect(format!("http://localhost:{port}/api/events")) {
+                        Ok((ws, _)) => ws,
+                        Err(_) => {
+                            // note: ping anyway, and check if the channel is still alive,
+                            // otherwise exit the thread
+                            sender
+                                .send(ServerEvent::PingResponseDisconnected)
+                                .map_err(err!())?;
+
+                            thread::sleep(Duration::from_secs(1));
+
+                            continue;
+                        }
+                    };
+
+                loop {
+                    match ws.read_message() {
+                        Ok(tungstenite::Message::Binary(data)) => {
+                            if let Ok(event) = bincode::deserialize(&data) {
+                                sender.send(ServerEvent::Event(event)).map_err(err!())?;
+                            }
+                        }
+                        Err(_) => {
+                            sender
+                                .send(ServerEvent::PingResponseDisconnected)
+                                .map_err(err!())?;
+
+                            break;
+                        }
+                        _ => (),
+                    }
+                }
+            }
+        }
+    });
+
+    let ping_thread = thread::spawn({
+        let sender = sender.clone();
+        let data_source = Arc::clone(&data_source);
+        move || -> StrResult {
+            let dashboard_request_uri = format!("http://localhost:{port}/api/dashboard-request");
+            let request_agent = ureq::AgentBuilder::new()
+                .timeout_connect(Duration::from_secs(1))
+                .build();
+
+            let mut connected = false;
+
+            loop {
+                let response = request_agent
+                    .get(&dashboard_request_uri)
+                    .send_json(&DashboardRequest::Ping);
+
+                if response.is_ok() {
+                    if !connected {
+                        *data_source.lock() = DataSource::Remote;
+                        sender
+                            .send(ServerEvent::PingResponseConnected)
+                            .map_err(err!())?;
+
+                        connected = true;
+                    }
+                } else if connected {
+                    *data_source.lock() =
+                        DataSource::Local(ServerDataManager::new(&session_file_path));
+                    sender
+                        .send(ServerEvent::PingResponseDisconnected)
+                        .map_err(err!())?;
+
+                    connected = false;
+                }
+            }
+        }
+    });
 
     let dashboard_request_uri = format!("http://localhost:{port}/api/dashboard-request");
-    let server_events_uri = format!("http://localhost:{port}/api/events");
-
-    thread::spawn(|| {});
-
     let request_agent = ureq::AgentBuilder::new()
-        .timeout_connect(Duration::from_millis(100))
+        .timeout_connect(Duration::from_secs(1))
         .build();
 
     while let Ok(request) = receiver.recv() {
-        match request_agent.get(&dashboard_request_uri).send_json(request) {
+        match request_agent
+            .get(&dashboard_request_uri)
+            .send_json(&request)
+        {
             Ok(response) => {
-                // response.
+                if let Ok(response) = response.into_json::<ServerResponse>() {
+                    match response {
+                        ServerResponse::AudioOutputDevices(devices) => {
+                            if sender
+                                .send(ServerEvent::AudioOutputDevices(devices))
+                                .is_err()
+                            {
+                                break;
+                            }
+                        }
+                        ServerResponse::AudioInputDevices(devices) => {
+                            if sender
+                                .send(ServerEvent::AudioInputDevices(devices))
+                                .is_err()
+                            {
+                                break;
+                            }
+                        }
+                        _ => (),
+                    }
+                }
             }
-            Err(ureq::Error::Status(status_code, _)) => {}
-            Err(ureq::Error::Transport(_)) => {}
+            Err(_) => {
+                if let DataSource::Local(data_manager) = &mut *data_source.lock() {
+                    match request {
+                        DashboardRequest::GetSession => {
+                            sender
+                                .send(ServerEvent::Event(Event {
+                                    timestamp: "".into(),
+                                    event_type: EventType::Session(Box::new(
+                                        data_manager.session().clone(),
+                                    )),
+                                }))
+                                .ok();
+                        }
+                        DashboardRequest::UpdateSession(session) => {
+                            *data_manager.session_mut() = *session
+                        }
+                        DashboardRequest::ExecuteScript(code) => {
+                            if let Err(e) = data_manager.execute_script(&code) {
+                                error!("Error executing script: {e}");
+                            }
+                        }
+                        DashboardRequest::UpdateClientList { hostname, action } => {
+                            data_manager.update_client_list(hostname, action)
+                        }
+                        DashboardRequest::GetAudioOutputDevices => {
+                            if let Ok(list) = data_manager.get_audio_devices_list() {
+                                sender
+                                    .send(ServerEvent::AudioOutputDevices(list.output))
+                                    .ok();
+                            }
+                        }
+                        DashboardRequest::GetAudioInputDevices => {
+                            if let Ok(list) = data_manager.get_audio_devices_list() {
+                                sender
+                                    .send(ServerEvent::AudioOutputDevices(list.input))
+                                    .ok();
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+            }
         }
-       
     }
-}
 
-fn get_gpu_names() -> Vec<
+    events_thread.join().ok();
+    ping_thread.join().ok();
+}

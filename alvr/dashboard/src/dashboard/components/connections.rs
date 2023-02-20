@@ -1,4 +1,4 @@
-use crate::{dashboard::ConnectionsRequest, dashboard::DashboardRequest, theme};
+use crate::{dashboard::DashboardRequest, theme};
 use alvr_session::{ClientConnectionDesc, SessionDesc};
 use egui::{Align, Frame, Layout, Resize, RichText, Ui, Window};
 use std::{
@@ -69,9 +69,9 @@ impl ConnectionsTab {
                             });
                         }
                         if ui.button("Remove").clicked() {
-                            response = Some(DashboardRequest::UpdateClientList(
-                                ConnectionsRequest::RemoveEntry(name.clone()),
-                            ));
+                            // response = Some(DashboardRequest::UpdateClientList(
+                            //     ConnectionsRequest::RemoveEntry(name.clone()),
+                            // ));
                         }
                     });
                 }
@@ -87,12 +87,12 @@ impl ConnectionsTab {
                         if ui.button("Trust").clicked() {
                             let mut client_desc = client_desc.clone();
                             client_desc.trusted = true;
-                            response = Some(DashboardRequest::UpdateClientList(
-                                ConnectionsRequest::AddOrUpdate {
-                                    name: name.clone(),
-                                    client_desc: client_desc.clone(),
-                                },
-                            ));
+                            // response = Some(DashboardRequest::UpdateClientList(
+                            //     ConnectionsRequest::AddOrUpdate {
+                            //         name: name.clone(),
+                            //         client_desc: client_desc.clone(),
+                            //     },
+                            // ));
                         };
                     });
                 }
@@ -151,17 +151,17 @@ impl ConnectionsTab {
                                     ip_addresses.insert(addr);
                                 }
 
-                                response = Some(DashboardRequest::UpdateClientList(
-                                    ConnectionsRequest::AddOrUpdate {
-                                        name: state.hostname.clone(),
-                                        client_desc: ClientConnectionDesc {
-                                            display_name: state.display_name.clone(),
-                                            current_ip: None,
-                                            manual_ips: ip_addresses,
-                                            trusted: true,
-                                        },
-                                    },
-                                ));
+                                // response = Some(DashboardRequest::UpdateClientList(
+                                //     ConnectionsRequest::AddOrUpdate {
+                                //         name: state.hostname.clone(),
+                                //         client_desc: ClientConnectionDesc {
+                                //             display_name: state.display_name.clone(),
+                                //             current_ip: None,
+                                //             manual_ips: ip_addresses,
+                                //             trusted: true,
+                                //         },
+                                //     },
+                                // ));
 
                                 close_popup = true;
                             }

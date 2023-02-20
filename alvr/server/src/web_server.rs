@@ -107,15 +107,30 @@ async fn http_api(
         "/api/dashboard-request" => {
             if let Ok(request) = from_request_body::<DashboardRequest>(request).await {
                 match request {
-                    DashboardRequest::UpdateClientList { hostname, action } => SERVER_DATA_MANAGER
-                        .write()
-                        .update_client_list(hostname, action),
-                    DashboardRequest::SessionUpdated(session) => {
+                    DashboardRequest::GetSession => {
+                        alvr_events::send_event(alvr_events::EventType::Session(Box::new(
+                            SERVER_DATA_MANAGER.read().session().clone(),
+                        )));
+                    }
+                    DashboardRequest::UpdateSession(session) => {
                         *SERVER_DATA_MANAGER.write().session_mut() = *session
                     }
                     DashboardRequest::ExecuteScript(code) => {
-                        if SERVER_DATA_MANAGER.write().execute_script(&code).is_err() {
-                            return reply(StatusCode::BAD_REQUEST);
+                        if let Err(e) = SERVER_DATA_MANAGER.write().execute_script(&code) {
+                            error!("Error executing script: {e}");
+                        }
+                    }
+                    DashboardRequest::UpdateClientList { hostname, action } => SERVER_DATA_MANAGER
+                        .write()
+                        .update_client_list(hostname, action),
+                    DashboardRequest::GetAudioOutputDevices => {
+                        if let Ok(list) = SERVER_DATA_MANAGER.read().get_audio_devices_list() {
+                            return reply_json(&list.output);
+                        }
+                    }
+                    DashboardRequest::GetAudioInputDevices => {
+                        if let Ok(list) = SERVER_DATA_MANAGER.read().get_audio_devices_list() {
+                            return reply_json(&list.input);
                         }
                     }
                     DashboardRequest::RestartSteamVR => crate::notify_restart_driver(),
@@ -123,6 +138,7 @@ async fn http_api(
                         let level = event.severity.into_log_level();
                         log::log!(level, "{}", event.content);
                     }
+                    DashboardRequest::Ping => (),
                 }
 
                 reply(StatusCode::OK)?

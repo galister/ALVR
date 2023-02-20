@@ -221,10 +221,6 @@ pub struct ColorCorrectionDesc {
     pub sharpening: f32,
 }
 
-// Note: This enum cannot be converted to camelCase due to a inconsistency between generation and
-// validation: "hevc" vs "hEVC".
-// This is caused by serde and settings-schema using different libraries for casing conversion
-// todo: don't use casing conversion also for all other structs and enums
 #[repr(u8)]
 #[derive(SettingsSchema, Serialize, Deserialize, Debug, Copy, Clone)]
 pub enum CodecType {
@@ -315,6 +311,7 @@ pub struct GameAudioDesc {
 pub struct MicrophoneDesc {
     #[schema(strings(display_name = "Input device ID"))]
     pub input_device_id: AudioDeviceId,
+    #[cfg(not(target_os = "linux"))]
     #[schema(strings(display_name = "Output device ID"))]
     pub output_device_id: AudioDeviceId,
     pub buffering_config: AudioBufferingConfig,
@@ -495,14 +492,12 @@ pub enum SocketBufferSize {
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct DisconnectionCriteria {
     pub latency_threshold_ms: u64,
     pub sustain_duration_s: u64,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct ConnectionDesc {
     pub client_discovery: Switch<DiscoveryConfig>,
 
