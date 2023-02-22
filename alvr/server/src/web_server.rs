@@ -14,7 +14,11 @@ use hyper::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json as json;
-use std::{env::consts::OS, net::SocketAddr, path::PathBuf};
+use std::{
+    env::consts::OS,
+    net::{IpAddr, SocketAddr},
+    path::PathBuf,
+};
 use tokio::sync::broadcast::{self, error::RecvError};
 use tokio_tungstenite::{tungstenite::protocol, WebSocketStream};
 use tokio_util::codec::{BytesCodec, FramedRead};
@@ -181,9 +185,13 @@ async fn http_api(
         "/api/client/add" => {
             if let Ok((hostname, ip)) = from_request_body::<(String, _)>(request).await {
                 let mut data_manager = SERVER_DATA_MANAGER.write();
-                data_manager.update_client_list(hostname.clone(), ClientListAction::AddIfMissing);
-                data_manager.update_client_list(hostname.clone(), ClientListAction::Trust);
-                data_manager.update_client_list(hostname, ClientListAction::AddIp(ip));
+                data_manager.update_client_list(
+                    hostname,
+                    ClientListAction::AddIfMissing {
+                        trusted: true,
+                        manual_ips: vec![ip],
+                    },
+                );
 
                 reply(StatusCode::OK)?
             } else {
@@ -195,7 +203,8 @@ async fn http_api(
                 let mut data_manager = SERVER_DATA_MANAGER.write();
                 data_manager.update_client_list(hostname.clone(), ClientListAction::Trust);
                 if let Some(ip) = maybe_ip {
-                    data_manager.update_client_list(hostname, ClientListAction::AddIp(ip));
+                    data_manager
+                        .update_client_list(hostname, ClientListAction::SetManualIps(vec![ip]));
                 }
                 reply(StatusCode::OK)?
             } else {
@@ -203,10 +212,13 @@ async fn http_api(
             }
         }
         "/api/client/remove" => {
-            if let Ok((hostname, maybe_ip)) = from_request_body(request).await {
+            if let Ok((hostname, maybe_ip)) =
+                from_request_body::<(String, Option<IpAddr>)>(request).await
+            {
                 let mut data_manager = SERVER_DATA_MANAGER.write();
-                if let Some(ip) = maybe_ip {
-                    data_manager.update_client_list(hostname, ClientListAction::RemoveIp(ip));
+                if maybe_ip.is_some() {
+                    data_manager
+                        .update_client_list(hostname, ClientListAction::SetManualIps(vec![]));
                 } else {
                     data_manager.update_client_list(hostname, ClientListAction::RemoveEntry);
                 }

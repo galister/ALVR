@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::{dashboard::theme::graph_colors, dashboard::DashboardRequest};
 use alvr_events::{GraphStatistics, Statistics};
-use egui::{
+use eframe::egui::{
     emath,
     plot::{Line, Plot, PlotPoints},
     popup, pos2, vec2, Align, Align2, Color32, FontId, Frame, Id, Label, Layout, Pos2, Rect,

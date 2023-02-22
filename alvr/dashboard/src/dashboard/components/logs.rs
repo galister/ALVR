@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::dashboard::DashboardRequest;
 use alvr_events::Event;
-use egui::{ScrollArea, Ui};
+use eframe::egui::{ScrollArea, Ui};
 
 pub struct LogsTab {
     events: VecDeque<Event>,

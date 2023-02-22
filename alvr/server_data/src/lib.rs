@@ -5,7 +5,7 @@ use alvr_sockets::{AudioDevicesList, ClientListAction, GpuVendor, PathSegment};
 use cpal::traits::{DeviceTrait, HostTrait};
 use serde_json as json;
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap},
     fs,
     ops::{Deref, DerefMut},
     path::{Path, PathBuf},
@@ -245,12 +245,15 @@ impl ServerDataManager {
 
         let mut updated = false;
         match action {
-            ClientListAction::AddIfMissing => {
+            ClientListAction::AddIfMissing {
+                trusted,
+                manual_ips,
+            } => {
                 if let Entry::Vacant(new_entry) = maybe_client_entry {
                     let client_connection_desc = ClientConnectionDesc {
-                        trusted: false,
+                        trusted,
                         current_ip: None,
-                        manual_ips: HashSet::new(),
+                        manual_ips: manual_ips.into_iter().collect(),
                         display_name: "Unknown".into(),
                     };
                     new_entry.insert(client_connection_desc);
@@ -272,16 +275,9 @@ impl ServerDataManager {
                     updated = true;
                 }
             }
-            ClientListAction::AddIp(ip) => {
+            ClientListAction::SetManualIps(ips) => {
                 if let Entry::Occupied(mut entry) = maybe_client_entry {
-                    entry.get_mut().manual_ips.insert(ip);
-
-                    updated = true;
-                }
-            }
-            ClientListAction::RemoveIp(ip) => {
-                if let Entry::Occupied(mut entry) = maybe_client_entry {
-                    entry.get_mut().manual_ips.remove(&ip);
+                    entry.get_mut().manual_ips = ips.into_iter().collect();
 
                     updated = true;
                 }

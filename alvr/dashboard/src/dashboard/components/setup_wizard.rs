@@ -1,5 +1,8 @@
 use crate::dashboard::DashboardRequest;
-use egui::{Layout, Ui};
+use eframe::{
+    egui::{Layout, Ui},
+    emath::Align,
+};
 
 enum Page {
     Welcome,
@@ -29,7 +32,7 @@ impl SetupWizard {
                 ui.heading("Welcome to ALVR");
                 ui.label("This setup will help with a basic setup of ALVR");
             });
-            ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if ui.button("❌").clicked() {
                     // response = Some(DashboardRequest::SetupWizard(SetupWizardResponse::Close));
                 }
@@ -91,7 +94,7 @@ You can always restart this setup wizard from the "Installation" tab on the left
                 );
             }
         };
-        ui.with_layout(Layout::bottom_up(egui::Align::Max), |ui| {
+        ui.with_layout(Layout::bottom_up(Align::Max), |ui| {
             ui.add_space(20.0);
             ui.horizontal(|ui| match self.page {
                 Welcome => {

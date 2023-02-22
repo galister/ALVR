@@ -8,9 +8,9 @@ use crate::{dashboard::components::StatisticsTab, launcher, theme, ServerEvent};
 use alvr_events::{Event, EventSeverity, EventType, LogEvent};
 use alvr_session::{ClientConnectionDesc, LogLevel, SessionDesc};
 use alvr_sockets::{ClientListAction, DashboardRequest};
-use egui::{
-    style::Margin, Align, CentralPanel, Context, Frame, Label, Layout, RichText, ScrollArea,
-    SidePanel, Stroke,
+use eframe::egui::{
+    self, style::Margin, Align, CentralPanel, Context, Frame, Label, Layout, RichText, ScrollArea,
+    SidePanel, Stroke, TopBottomPanel,
 };
 use std::{
     collections::BTreeMap,
@@ -45,6 +45,7 @@ enum Tab {
 }
 
 pub struct Dashboard {
+    connected_to_server: bool,
     selected_tab: Tab,
     tab_labels: BTreeMap<Tab, &'static str>,
     connections_tab: ConnectionsTab,
@@ -57,7 +58,6 @@ pub struct Dashboard {
     setup_wizard: Option<SetupWizard>,
     session: SessionDesc,
     // drivers: Vec<String>,
-    // connected: Option<String>,
     dashboard_requests_sender: mpsc::Sender<DashboardRequest>,
     server_events_receiver: mpsc::Receiver<ServerEvent>,
 }
@@ -71,31 +71,11 @@ impl Dashboard {
         dashboard_requests_sender
             .send(DashboardRequest::GetSession)
             .unwrap();
-        // let session = loop {
-        //     match server_events_receiver.recv().unwrap() {
-        //         ServerEvent::SessionResponse(session) => break session,
-        //         ServerEvent::LostConnection(_) => break alvr_session::SessionDesc::default(),
-        //         _ => (),
-        //     }
-        // };
-        // dashboard_requests_sender
-        //     .send(DashboardRequest::GetDrivers)
-        //     .unwrap();
-        // let (drivers, connected) = loop {
-        //     match server_events_receiver.recv().unwrap() {
-        //         ServerEvent::DriverResponse(drivers) => break (drivers, None),
-        //         ServerEvent::LostConnection(why) => break (Vec::new(), Some(why)),
-        //         _ => (),
-        //     }
-        // };
-
-        // if connected.is_some() {
-        //     launcher::launch();
-        // }
 
         theme::set_theme(&creation_context.egui_ctx);
 
         Self {
+            connected_to_server: false,
             selected_tab: Tab::Connections,
             tab_labels: [
                 (Tab::Connections, "🔌 Connections"),
@@ -117,7 +97,6 @@ impl Dashboard {
             setup_wizard: None,
             session: SessionDesc::default(),
             // drivers,
-            // connected: false,
             dashboard_requests_sender,
             server_events_receiver,
         }
@@ -126,8 +105,8 @@ impl Dashboard {
 
 impl eframe::App for Dashboard {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        for msg in self.server_events_receiver.try_iter() {
-            match msg {
+        for event in self.server_events_receiver.try_iter() {
+            match event {
                 ServerEvent::Event(event) => {
                     match &event.event_type {
                         EventType::GraphStatistics(graph_statistics) => self
@@ -168,25 +147,19 @@ impl eframe::App for Dashboard {
                 //     self.dashboard.new_drivers(drivers);
                 // }
                 ServerEvent::PingResponseConnected => {
-                    // self.dashboard.connection_status(Some(why));
+                    self.connected_to_server = true;
                 }
                 ServerEvent::PingResponseDisconnected => {
-                    // self.dashboard.connection_status(None);
-                    // self.dashboard_requests_sender
-                    //     .send(DashboardRequest::GetSession)
-                    //     .unwrap();
-                    // self.dashboard_requests_sender
-                    //     .send(DashboardRequest::GetDrivers)
-                    //     .unwrap();
+                    self.connected_to_server = false;
                 }
                 ServerEvent::AudioOutputDevices(_) => todo!(),
                 ServerEvent::AudioInputDevices(_) => todo!(),
             }
         }
 
-        let mut response = match &mut self.setup_wizard {
+        let request = match &mut self.setup_wizard {
             Some(setup_wizard) => {
-                egui::CentralPanel::default()
+                CentralPanel::default()
                     .show(ctx, |ui| setup_wizard.ui(ui))
                     .inner
             }
@@ -199,7 +172,7 @@ impl eframe::App for Dashboard {
                             EventSeverity::Warning => (theme::BG, theme::WARNING),
                             EventSeverity::Error => (theme::FG, theme::ERROR),
                         };
-                        egui::TopBottomPanel::bottom("bottom_panel")
+                        TopBottomPanel::bottom("bottom_panel")
                             .default_height(NOTIFICATION_BAR_HEIGHT)
                             .min_height(NOTIFICATION_BAR_HEIGHT)
                             .frame(
@@ -215,11 +188,7 @@ impl eframe::App for Dashboard {
                                             .wrap(true),
                                     );
                                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                        if ui.button("❌").clicked() {
-                                            true
-                                        } else {
-                                            false
-                                        }
+                                        ui.button("❌").clicked()
                                     })
                                     .inner
                                 })
@@ -228,7 +197,7 @@ impl eframe::App for Dashboard {
                             .inner
                     }
                     None => {
-                        egui::TopBottomPanel::bottom("bottom_panel")
+                        TopBottomPanel::bottom("bottom_panel")
                             .default_height(NOTIFICATION_BAR_HEIGHT)
                             .min_height(NOTIFICATION_BAR_HEIGHT)
                             .frame(
@@ -244,9 +213,9 @@ impl eframe::App for Dashboard {
                     self.notification = None;
                 }
 
-                let mut outer_margin = Margin::default();
+                // let mut outer_margin = Margin::default();
 
-                let response = SidePanel::left("side_panel")
+                let request = SidePanel::left("side_panel")
                     .resizable(false)
                     .frame(
                         Frame::none()
@@ -280,7 +249,7 @@ impl eframe::App for Dashboard {
                     })
                     .inner;
 
-                let response = CentralPanel::default()
+                CentralPanel::default()
                     .frame(
                         Frame::none()
                             .inner_margin(Margin::same(20.0))
@@ -290,7 +259,11 @@ impl eframe::App for Dashboard {
                         ui.with_layout(Layout::top_down_justified(Align::LEFT), |ui| {
                             ui.heading(*self.tab_labels.get(&self.selected_tab).unwrap());
                             ScrollArea::new([true, true]).show(ui, |ui| match self.selected_tab {
-                                Tab::Connections => self.connections_tab.ui(ui, &self.session),
+                                Tab::Connections => self.connections_tab.ui(
+                                    ui,
+                                    &self.session,
+                                    self.connected_to_server,
+                                ),
                                 Tab::Statistics => self.statistics_tab.ui(ui),
                                 Tab::Settings => self.settings_tab.ui(ui, &self.session),
                                 Tab::Installation => self.installation_tab.ui(ui, &vec![]),
@@ -302,58 +275,16 @@ impl eframe::App for Dashboard {
                     })
                     .inner
                     .inner
-                    .or(response);
-                response
+                    .or(request)
             }
         };
 
-        if let Some(response) = &response {
-            match response {
-                // DashboardRequest::SetupWizard(SetupWizardResponse::Close) => {
-                //     self.setup_wizard = None;
-                //     let mut session = self.session.to_owned();
-                //     session.setup_wizard = false;
-                //     response = Some(DashboardRequest::SessionUpdated(session));
-                // }
-                // DashboardRequest::SetupWizard(SetupWizardResponse::Start) => {
-                //     self.setup_wizard = Some(SetupWizard::new())
-                // }
-                // DashboardRequest::UpdateClientList(conn) => match conn {
-                //     ConnectionsRequest::AddOrUpdate { name, client_desc } => {
-                //         self.session
-                //             .client_connections
-                //             .insert(name.to_owned(), client_desc.to_owned());
-                //         response = Some(DashboardRequest::SessionUpdated(self.session.to_owned()));
-                //     }
-                //     ConnectionsRequest::RemoveEntry(name) => {
-                //         self.session.client_connections.remove(name);
-                //         response = Some(DashboardRequest::SessionUpdated(self.session.to_owned()));
-                //     }
-                // },
-
-                // DashboardRequest::SessionUpdated(session) => self.session = session.to_owned(),
-                _ => (),
-            }
+        if let Some(request) = request {
+            self.dashboard_requests_sender.send(request).ok();
         }
-
-        // match response {
-        //     Some(response) => {
-        //         match response {
-        //             // These are the responses we don't want to pass to the worker thread
-        //             DashboardRequest::PresetInvocation(_) | DashboardRequest::SetupWizard(_) => {}
-        //             _ => {
-        //                 self.dashboard_requests_sender
-        //                     .send(DashboardRequest::Dashboard(response))
-        //                     .unwrap();
-        //             }
-        //         }
-        //     }
-        //     None => (),
-        // }
     }
 
     fn on_close_event(&mut self) -> bool {
-        // self.dashboard_requests_sender.send(DashboardRequest::Quit).unwrap();
         true
     }
 }

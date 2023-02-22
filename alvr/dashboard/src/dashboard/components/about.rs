@@ -1,6 +1,6 @@
 use crate::dashboard::DashboardRequest;
 use alvr_session::SessionDesc;
-use egui::{RichText, Ui};
+use eframe::egui::{RichText, Ui};
 
 pub struct AboutTab {}
 

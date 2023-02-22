@@ -1,7 +1,7 @@
 // use super::{Section, SettingsContext, SettingsResponse};
 use crate::dashboard::{basic_components, DashboardRequest};
 use alvr_session::{SessionDesc, SessionSettings};
-use egui::Ui;
+use eframe::egui::Ui;
 use egui_extras::{Column, Table, TableBuilder, TableRow};
 use serde_json as json;
 use settings_schema::SchemaNode;

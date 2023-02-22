@@ -137,11 +137,13 @@ pub enum PathSegment {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ClientListAction {
-    AddIfMissing,
+    AddIfMissing {
+        trusted: bool,
+        manual_ips: Vec<IpAddr>,
+    },
     SetDisplayName(String),
     Trust,
-    AddIp(IpAddr),
-    RemoveIp(IpAddr),
+    SetManualIps(Vec<IpAddr>),
     RemoveEntry,
     UpdateCurrentIp(Option<IpAddr>),
 }

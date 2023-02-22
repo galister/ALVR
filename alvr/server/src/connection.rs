@@ -99,8 +99,13 @@ pub fn handshake_loop(frame_interval_sender: smpsc::Sender<Duration>) -> IntResu
             let trusted = {
                 let mut data_manager = SERVER_DATA_MANAGER.write();
 
-                data_manager
-                    .update_client_list(client_hostname.clone(), ClientListAction::AddIfMissing);
+                data_manager.update_client_list(
+                    client_hostname.clone(),
+                    ClientListAction::AddIfMissing {
+                        trusted: false,
+                        manual_ips: vec![],
+                    },
+                );
 
                 if config.auto_trust_clients {
                     data_manager

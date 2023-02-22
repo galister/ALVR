@@ -5,13 +5,9 @@ mod data_sources;
 mod launcher;
 mod theme;
 
-use alvr_sockets::{DashboardRequest, ServerResponse};
+use alvr_sockets::DashboardRequest;
 use dashboard::Dashboard;
-use std::{
-    sync::{mpsc, Arc},
-    thread,
-    time::Duration,
-};
+use std::{sync::mpsc, thread};
 
 pub enum ServerEvent {
     PingResponseConnected,
@@ -20,16 +16,6 @@ pub enum ServerEvent {
     AudioOutputDevices(Vec<String>),
     AudioInputDevices(Vec<String>),
 }
-
-// fn dashboard_requests_thread(receiver: mpsc::Receiver<DashboardRequest>, sender: mpsc::Sender<ServerEvent>) {
-
-// }
-
-// fn server_events_thread() {
-//     loop {
-//         let mut( socket, response)= tungstenite::connect("ws://localhost:8082")
-//     }
-// }
 
 fn main() {
     env_logger::init();

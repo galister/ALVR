@@ -299,7 +299,6 @@ dependencies = [
  "alvr_sockets",
  "bincode",
  "eframe",
- "egui",
  "egui_extras",
  "env_logger",
  "futures-util",

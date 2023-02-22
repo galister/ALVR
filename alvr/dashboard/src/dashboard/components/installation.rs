@@ -1,5 +1,5 @@
 use crate::{dashboard::DashboardRequest, theme};
-use egui::{Frame, RichText, Ui};
+use eframe::egui::{Frame, RichText, Ui};
 
 pub struct InstallationTab {}
 

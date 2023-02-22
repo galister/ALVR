@@ -1,4 +1,4 @@
-use egui::{vec2, Color32, Context, Rounding, Stroke, Visuals};
+use eframe::egui::{self, Color32, Context, Rounding, Stroke, Visuals};
 
 pub const ACCENT: Color32 = Color32::from_rgb(53, 132, 228);
 pub const BG: Color32 = Color32::from_rgb(30, 30, 30);
@@ -17,7 +17,7 @@ pub const ERROR: Color32 = Color32::from_rgb(192, 28, 40);
 
 // Graph colors
 pub mod graph_colors {
-    use egui::Color32;
+    use eframe::egui::Color32;
 
     pub const RENDER: Color32 = super::ERROR;
     pub const NETWORK: Color32 = Color32::from_rgb(94, 92, 100);
@@ -30,8 +30,8 @@ pub mod graph_colors {
 pub fn set_theme(ctx: &Context) {
     let mut style = (*ctx.style()).clone();
     style.spacing.slider_width = 200_f32; // slider width can only be set globally
-    style.spacing.item_spacing = vec2(15.0, 15.0);
-    style.spacing.button_padding = vec2(10.0, 10.0);
+    style.spacing.item_spacing = egui::vec2(15.0, 15.0);
+    style.spacing.button_padding = egui::vec2(10.0, 10.0);
 
     ctx.set_style(style);
 

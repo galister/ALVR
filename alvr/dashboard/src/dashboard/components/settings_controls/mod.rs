@@ -27,7 +27,7 @@ pub use switch::*;
 pub use text::*;
 pub use vector::*;
 
-use egui::Ui;
+use eframe::egui::Ui;
 // use serde::Serialize;
 use serde_json as json;
 use settings_schema::SchemaNode;

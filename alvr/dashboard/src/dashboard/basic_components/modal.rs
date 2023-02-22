@@ -1,4 +1,4 @@
-use egui::{Align, Align2, Layout, Ui, Window};
+use eframe::egui::{Align, Align2, Layout, Ui, Window};
 
 pub enum ModalResponse {
     Ok,

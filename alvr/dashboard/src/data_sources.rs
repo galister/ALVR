@@ -1,5 +1,5 @@
 use crate::ServerEvent;
-use alvr_common::{parking_lot::Mutex, prelude::*, StrResult};
+use alvr_common::{parking_lot::Mutex, prelude::*, RelaxedAtomic, StrResult};
 use alvr_events::{Event, EventType};
 use alvr_server_data::ServerDataManager;
 use alvr_sockets::{DashboardRequest, ServerResponse};
@@ -7,7 +7,7 @@ use std::{
     env,
     sync::{mpsc, Arc},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 enum DataSource {
@@ -28,6 +28,8 @@ pub fn data_interop_thread(
     let port = server_data_manager.settings().connection.web_server_port;
 
     let data_source = Arc::new(Mutex::new(DataSource::Local(server_data_manager)));
+
+    let running = Arc::new(RelaxedAtomic::new(true));
 
     let events_thread = thread::spawn({
         let sender = sender.clone();
@@ -56,14 +58,15 @@ pub fn data_interop_thread(
                                 sender.send(ServerEvent::Event(event)).map_err(err!())?;
                             }
                         }
-                        Err(_) => {
+                        _ => {
                             sender
                                 .send(ServerEvent::PingResponseDisconnected)
                                 .map_err(err!())?;
 
+                            error!("fdsf");
+
                             break;
                         }
-                        _ => (),
                     }
                 }
             }
@@ -73,6 +76,7 @@ pub fn data_interop_thread(
     let ping_thread = thread::spawn({
         let sender = sender.clone();
         let data_source = Arc::clone(&data_source);
+        let running = Arc::clone(&running);
         move || -> StrResult {
             let dashboard_request_uri = format!("http://localhost:{port}/api/dashboard-request");
             let request_agent = ureq::AgentBuilder::new()
@@ -80,6 +84,9 @@ pub fn data_interop_thread(
                 .build();
 
             let mut connected = false;
+
+            const PING_INTERVAL: Duration = Duration::from_secs(1);
+            let mut deadline = Instant::now();
 
             loop {
                 let response = request_agent
@@ -103,6 +110,14 @@ pub fn data_interop_thread(
                         .map_err(err!())?;
 
                     connected = false;
+                }
+
+                deadline += PING_INTERVAL;
+                while Instant::now() < deadline {
+                    if !running.value() {
+                        return Ok(());
+                    }
+                    thread::sleep(Duration::from_millis(100));
                 }
             }
         }
@@ -143,27 +158,40 @@ pub fn data_interop_thread(
             }
             Err(_) => {
                 if let DataSource::Local(data_manager) = &mut *data_source.lock() {
+                    fn send_session(
+                        sender: &mpsc::Sender<ServerEvent>,
+                        data_manager: &mut ServerDataManager,
+                    ) {
+                        sender
+                            .send(ServerEvent::Event(Event {
+                                timestamp: "".into(),
+                                event_type: EventType::Session(Box::new(
+                                    data_manager.session().clone(),
+                                )),
+                            }))
+                            .ok();
+                    }
+
                     match request {
                         DashboardRequest::GetSession => {
-                            sender
-                                .send(ServerEvent::Event(Event {
-                                    timestamp: "".into(),
-                                    event_type: EventType::Session(Box::new(
-                                        data_manager.session().clone(),
-                                    )),
-                                }))
-                                .ok();
+                            send_session(&sender, data_manager);
                         }
                         DashboardRequest::UpdateSession(session) => {
-                            *data_manager.session_mut() = *session
+                            *data_manager.session_mut() = *session;
+
+                            send_session(&sender, data_manager);
                         }
                         DashboardRequest::ExecuteScript(code) => {
                             if let Err(e) = data_manager.execute_script(&code) {
                                 error!("Error executing script: {e}");
                             }
+
+                            send_session(&sender, data_manager);
                         }
                         DashboardRequest::UpdateClientList { hostname, action } => {
-                            data_manager.update_client_list(hostname, action)
+                            data_manager.update_client_list(hostname, action);
+
+                            send_session(&sender, data_manager);
                         }
                         DashboardRequest::GetAudioOutputDevices => {
                             if let Ok(list) = data_manager.get_audio_devices_list() {
@@ -185,6 +213,8 @@ pub fn data_interop_thread(
             }
         }
     }
+
+    running.set(false);
 
     events_thread.join().ok();
     ping_thread.join().ok();
