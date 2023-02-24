@@ -2,7 +2,7 @@ use crate::{dashboard::DashboardRequest, theme};
 use alvr_session::SessionDesc;
 use alvr_sockets::ClientListAction;
 use eframe::{
-    egui::{Frame, RichText, TextEdit, Ui, Window},
+    egui::{Frame, TextEdit, Ui, Window},
     emath::Align2,
 };
 use std::net::{IpAddr, Ipv4Addr};
@@ -49,7 +49,7 @@ impl ConnectionsTab {
         Frame::group(ui.style())
             .fill(theme::SECTION_BG)
             .show(ui, |ui| {
-                ui.label(RichText::new("New clients").size(18.0));
+                ui.heading("New clients");
                 for (hostname, _) in untrusted_clients {
                     ui.horizontal(|ui| {
                         ui.label(hostname);
@@ -66,7 +66,7 @@ impl ConnectionsTab {
         Frame::group(ui.style())
             .fill(theme::SECTION_BG)
             .show(ui, |ui| {
-                ui.label(RichText::new("Trusted clients").size(18.0));
+                ui.heading("Trusted clients");
                 for (hostname, data) in trusted_clients {
                     ui.horizontal(|ui| {
                         ui.label(format!(
@@ -94,7 +94,9 @@ impl ConnectionsTab {
                     });
                 }
             });
+
         ui.add_space(10.0);
+
         if ui.button("Add client manually").clicked() {
             self.edit_popup_state = Some(EditPopupState {
                 hostname: "XXXX.client.alvr".into(),
@@ -111,17 +113,18 @@ impl ConnectionsTab {
                 .show(ui.ctx(), |ui| {
                     ui.columns(2, |ui| {
                         ui[0].label("Hostname:");
-                        TextEdit::singleline(&mut state.hostname)
-                            .interactive(state.new_client)
-                            .show(&mut ui[1]);
-                        ui[0].label("IP Addresses");
+                        ui[1].add_enabled(
+                            state.new_client,
+                            TextEdit::singleline(&mut state.hostname),
+                        );
+                        ui[0].label("IP Addresses:");
+                        for address in &mut state.ips {
+                            ui[1].text_edit_singleline(address);
+                        }
                         if ui[1].button("Add new").clicked() {
                             state.ips.push("192.168.1.2".to_string());
                         }
                     });
-                    for address in &mut state.ips {
-                        ui.text_edit_singleline(address);
-                    }
                     ui.columns(2, |ui| {
                         if ui[0].button("Ok").clicked() {
                             let manual_ips =

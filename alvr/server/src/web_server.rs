@@ -17,7 +17,6 @@ use serde_json as json;
 use std::{
     env::consts::OS,
     net::{IpAddr, SocketAddr},
-    path::PathBuf,
 };
 use tokio::sync::broadcast::{self, error::RecvError};
 use tokio_tungstenite::{tungstenite::protocol, WebSocketStream};
@@ -118,6 +117,12 @@ async fn http_api(
                     }
                     DashboardRequest::UpdateSession(session) => {
                         *SERVER_DATA_MANAGER.write().session_mut() = *session
+                    }
+                    DashboardRequest::SetSingleValue { path, new_value } => {
+                        SERVER_DATA_MANAGER
+                            .write()
+                            .set_single_value(path, new_value)
+                            .ok();
                     }
                     DashboardRequest::ExecuteScript(code) => {
                         if let Err(e) = SERVER_DATA_MANAGER.write().execute_script(&code) {

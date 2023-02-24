@@ -15,7 +15,7 @@ use eframe::egui::{
 use std::{
     collections::BTreeMap,
     ops::Deref,
-    sync::{mpsc, Arc},
+    sync::{atomic::AtomicUsize, mpsc, Arc},
 };
 
 const NOTIFICATION_BAR_HEIGHT: f32 = 30.0;
@@ -26,12 +26,24 @@ pub struct DisplayString {
     pub display: String,
 }
 
+impl From<(String, String)> for DisplayString {
+    fn from((id, display): (String, String)) -> Self {
+        Self { id, display }
+    }
+}
+
 impl Deref for DisplayString {
     type Target = String;
 
     fn deref(&self) -> &String {
         &self.id
     }
+}
+
+fn get_id() -> usize {
+    static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
+
+    NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -78,12 +90,12 @@ impl Dashboard {
             connected_to_server: false,
             selected_tab: Tab::Connections,
             tab_labels: [
-                (Tab::Connections, "🔌 Connections"),
-                (Tab::Statistics, "📈 Statistics"),
-                (Tab::Settings, "⚙ Settings"),
-                (Tab::Installation, "💾 Installation"),
-                (Tab::Logs, "📝 Logs"),
-                (Tab::About, "ℹ About"),
+                (Tab::Connections, "🔌  Connections"),
+                (Tab::Statistics, "📈  Statistics"),
+                (Tab::Settings, "⚙  Settings"),
+                (Tab::Installation, "💾  Installation"),
+                (Tab::Logs, "📝  Logs"),
+                (Tab::About, "ℹ  About"),
             ]
             .into_iter()
             .collect(),
@@ -223,10 +235,13 @@ impl eframe::App for Dashboard {
                             .inner_margin(Margin::same(7.0))
                             .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
                     )
-                    .max_width(150.0)
+                    .exact_width(120.0)
                     .show(ctx, |ui| {
-                        ui.heading("ALVR");
-                        egui::warn_if_debug_build(ui);
+                        ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
+                            ui.add_space(13.0);
+                            ui.heading(RichText::new("ALVR").size(25.0).strong());
+                            egui::warn_if_debug_build(ui);
+                        });
 
                         ui.with_layout(Layout::top_down_justified(Align::Min), |ui| {
                             for (tab, label) in &self.tab_labels {
@@ -257,23 +272,27 @@ impl eframe::App for Dashboard {
                     )
                     .show(ctx, |ui| {
                         ui.with_layout(Layout::top_down_justified(Align::LEFT), |ui| {
-                            ui.heading(*self.tab_labels.get(&self.selected_tab).unwrap());
-                            ScrollArea::new([true, true]).show(ui, |ui| match self.selected_tab {
-                                Tab::Connections => self.connections_tab.ui(
-                                    ui,
-                                    &self.session,
-                                    self.connected_to_server,
-                                ),
-                                Tab::Statistics => self.statistics_tab.ui(ui),
-                                Tab::Settings => self.settings_tab.ui(ui, &self.session),
-                                Tab::Installation => self.installation_tab.ui(ui, &vec![]),
-                                Tab::Logs => self.logs_tab.ui(ui),
-                                Tab::About => self.about_tab.ui(ui, &self.session),
-                            })
+                            ui.heading(
+                                RichText::new(*self.tab_labels.get(&self.selected_tab).unwrap())
+                                    .size(25.0),
+                            );
+                            ScrollArea::new([true, true])
+                                .show(ui, |ui| match self.selected_tab {
+                                    Tab::Connections => self.connections_tab.ui(
+                                        ui,
+                                        &self.session,
+                                        self.connected_to_server,
+                                    ),
+                                    Tab::Statistics => self.statistics_tab.ui(ui),
+                                    Tab::Settings => self.settings_tab.ui(ui),
+                                    Tab::Installation => self.installation_tab.ui(ui, &vec![]),
+                                    Tab::Logs => self.logs_tab.ui(ui),
+                                    Tab::About => self.about_tab.ui(ui, &self.session),
+                                })
+                                .inner
                         })
                         .inner
                     })
-                    .inner
                     .inner
                     .or(request)
             }

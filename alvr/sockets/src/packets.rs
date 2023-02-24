@@ -129,7 +129,7 @@ pub enum GpuVendor {
     Other,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum PathSegment {
     Name(String),
     Index(usize),
@@ -164,6 +164,10 @@ pub enum DashboardRequest {
     Ping,
     GetSession,
     UpdateSession(Box<SessionDesc>),
+    SetSingleValue {
+        path: Vec<PathSegment>,
+        new_value: serde_json::Value,
+    },
     ExecuteScript(String),
     UpdateClientList {
         hostname: String,

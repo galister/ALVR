@@ -7,7 +7,7 @@ pub const SECTION_BG: Color32 = Color32::from_rgb(36, 36, 36);
 pub const DARKER_BG: Color32 = Color32::from_rgb(26, 26, 26);
 pub const SEPARATOR_BG: Color32 = Color32::from_rgb(69, 69, 69);
 pub const SELECTED: Color32 = Color32::from_rgb(120, 174, 237);
-pub const FG: Color32 = Color32::WHITE;
+pub const FG: Color32 = Color32::from_rgb(250, 250, 250);
 
 // Colors for the notifications
 pub const DEBUG: Color32 = BG;

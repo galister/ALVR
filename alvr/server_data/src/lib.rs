@@ -156,7 +156,7 @@ impl ServerDataManager {
     }
 
     // Note: "value" can be any session subtree, in json format.
-    pub fn set_single_value(&mut self, path: Vec<PathSegment>, value: &str) -> StrResult {
+    pub fn set_single_value(&mut self, path: Vec<PathSegment>, value: json::Value) -> StrResult {
         let mut session_json = serde_json::to_value(self.session.clone()).map_err(err!())?;
 
         let mut session_ref = &mut session_json;
@@ -167,7 +167,7 @@ impl ServerDataManager {
             };
         }
 
-        *session_ref = serde_json::from_str(value).map_err(err!())?;
+        *session_ref = value;
 
         // session_json has been updated
         self.session = serde_json::from_value(session_json).map_err(err!())?;

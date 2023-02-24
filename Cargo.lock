@@ -420,6 +420,7 @@ dependencies = [
  "bytes",
  "futures",
  "serde",
+ "serde_json",
  "socket2",
  "tokio",
  "tokio-util",
