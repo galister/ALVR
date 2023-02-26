@@ -1,5 +1,8 @@
 use crate::dashboard::DisplayString;
-use eframe::egui::Ui;
+use eframe::{
+    egui::{Layout, Ui},
+    emath::Align,
+};
 
 // todo: use a custom widget
 pub fn button_group_clicked(
@@ -8,15 +11,17 @@ pub fn button_group_clicked(
     selection: &mut String,
 ) -> bool {
     let mut clicked = false;
-    for id in options {
-        if ui
-            .selectable_value(selection, (**id).clone(), &id.display)
-            .clicked()
-        {
-            *selection = (**id).to_owned();
-            clicked = true;
+    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+        for id in options {
+            if ui
+                .selectable_value(selection, (**id).clone(), &id.display)
+                .clicked()
+            {
+                *selection = (**id).to_owned();
+                clicked = true;
+            }
         }
-    }
+    });
 
     clicked
 }

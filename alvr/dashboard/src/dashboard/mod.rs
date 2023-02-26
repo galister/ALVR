@@ -120,15 +120,16 @@ impl eframe::App for Dashboard {
         for event in self.server_events_receiver.try_iter() {
             match event {
                 ServerEvent::Event(event) => {
-                    match &event.event_type {
+                    match event.event_type {
                         EventType::GraphStatistics(graph_statistics) => self
                             .statistics_tab
-                            .update_graph_statistics(graph_statistics.clone()),
+                            .update_graph_statistics(graph_statistics),
                         EventType::Statistics(statistics) => {
-                            self.statistics_tab.update_statistics(statistics.clone())
+                            self.statistics_tab.update_statistics(statistics)
                         }
                         EventType::Session(session) => {
                             self.session = *session.clone();
+                            self.settings_tab.update_session(&session.session_settings);
                         }
                         _ => {
                             self.logs_tab.update_logs(event.clone());

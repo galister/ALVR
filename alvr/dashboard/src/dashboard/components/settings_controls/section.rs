@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-
 use super::{NestingInfo, SettingControl, INDENTATION_STEP};
 use crate::dashboard::DisplayString;
 use alvr_sockets::DashboardRequest;
 use eframe::egui::Ui;
 use serde_json as json;
 use settings_schema::{NamedEntry, SchemaNode};
+use std::collections::HashMap;
 
 fn get_display_name(id: &str, strings: &HashMap<String, String>) -> String {
     strings.get("display_name").cloned().unwrap_or_else(|| {
@@ -60,30 +59,29 @@ impl Control {
     }
 
     pub fn ui(
-        &self,
+        &mut self,
         ui: &mut Ui,
         session_fragment: &mut json::Value,
-        inline: bool,
+        allow_inline: bool,
     ) -> Option<DashboardRequest> {
-        let session_fragments = session_fragment.as_object_mut().unwrap();
+        super::grid_flow_block(ui, allow_inline);
 
-        if inline {
-            // there are no inline controls, go to new row
-            ui.end_row();
-        }
+        let session_fragments_mut = session_fragment.as_object_mut().unwrap();
+
+        let entries_count = self.entries.len();
 
         let mut response = None;
-        for (i, entry) in self.entries.iter().enumerate() {
+        for (i, entry) in self.entries.iter_mut().enumerate() {
             ui.horizontal(|ui| {
                 ui.add_space(INDENTATION_STEP * self.nesting_info.indentation_level as f32);
                 ui.label(&entry.id.display);
             });
             response = entry
                 .control
-                .ui(ui, &mut session_fragments[&entry.id.id], true)
+                .ui(ui, &mut session_fragments_mut[&entry.id.id], true)
                 .or(response);
 
-            if i != self.entries.len() - 1 {
+            if i != entries_count - 1 {
                 ui.end_row();
             }
         }

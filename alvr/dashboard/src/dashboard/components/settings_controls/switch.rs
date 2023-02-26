@@ -1,6 +1,5 @@
-use crate::dashboard::basic_components;
-
 use super::{reset, NestingInfo, SettingControl};
+use crate::dashboard::basic_components;
 use alvr_sockets::DashboardRequest;
 use eframe::{
     egui::{Layout, Ui},
@@ -13,7 +12,7 @@ pub struct Control {
     nesting_info: NestingInfo,
     default_enabled: bool,
     default_string: String,
-    control: Box<SettingControl>,
+    content_control: Box<SettingControl>,
 }
 
 impl Control {
@@ -39,28 +38,26 @@ impl Control {
             nesting_info,
             default_enabled,
             default_string,
-            control: Box::new(control),
+            content_control: Box::new(control),
         }
     }
 
     pub fn ui(
-        &self,
+        &mut self,
         ui: &mut Ui,
         session_fragment: &mut json::Value,
-        inline: bool,
+        allow_inline: bool,
     ) -> Option<DashboardRequest> {
-        let session_switch = session_fragment.as_object_mut().unwrap();
+        super::grid_flow_inline(ui, allow_inline);
+
+        let session_switch_mut = session_fragment.as_object_mut().unwrap();
 
         // todo: can this be written better?
-        let enabled = if let json::Value::Bool(enabled) = &mut session_switch["enabled"] {
+        let enabled_mut = if let json::Value::Bool(enabled) = &mut session_switch_mut["enabled"] {
             enabled
         } else {
             unreachable!()
         };
-
-        if !inline {
-            ui.add_space(1.0);
-        }
 
         let mut request = None;
 
@@ -69,23 +66,27 @@ impl Control {
         }
 
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-            if basic_components::switch(ui, enabled).clicked() {
-                request = get_request(&self.nesting_info, *enabled);
+            if basic_components::switch(ui, enabled_mut).clicked() {
+                request = get_request(&self.nesting_info, *enabled_mut);
             }
 
-            if reset::reset_button(ui, *enabled != self.default_enabled, &self.default_string)
-                .clicked()
+            if reset::reset_button(
+                ui,
+                *enabled_mut != self.default_enabled,
+                &self.default_string,
+            )
+            .clicked()
             {
                 request = get_request(&self.nesting_info, self.default_enabled);
             }
         });
 
-        if *enabled {
+        if *enabled_mut {
             ui.end_row();
 
             request = self
-                .control
-                .ui(ui, &mut session_switch["content"], false)
+                .content_control
+                .ui(ui, &mut session_switch_mut["content"], false)
                 .or(request);
         }
 

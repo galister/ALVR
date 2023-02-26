@@ -52,12 +52,15 @@ impl Control {
             })
             .collect::<Vec<_>>();
 
-        let default_string = variant_labels
-            .iter()
-            .find(|d| d.id == default)
-            .cloned()
-            .unwrap()
-            .display;
+        let default_string = format!(
+            "\"{}\"",
+            variant_labels
+                .iter()
+                .find(|d| d.id == default)
+                .cloned()
+                .unwrap()
+                .display
+        );
 
         let variant_controls = schema_variants
             .into_iter()
@@ -86,23 +89,22 @@ impl Control {
     }
 
     pub fn ui(
-        &self,
+        &mut self,
         ui: &mut Ui,
         session_fragment: &mut json::Value,
-        inline: bool,
+        allow_inline: bool,
     ) -> Option<DashboardRequest> {
-        let session_variants = session_fragment.as_object_mut().unwrap();
+        super::grid_flow_inline(ui, allow_inline);
+
+        let session_variants_mut = session_fragment.as_object_mut().unwrap();
 
         // todo: can this be written better?
-        let variant = if let json::Value::String(string) = &mut session_variants["variant"] {
-            string
+        let variant_mut = if let json::Value::String(variant) = &mut session_variants_mut["variant"]
+        {
+            variant
         } else {
             unreachable!()
         };
-
-        if !inline {
-            ui.add_space(1.0);
-        }
 
         fn get_request(nesting_info: &NestingInfo, variant: &str) -> Option<DashboardRequest> {
             super::set_single_value(
@@ -114,25 +116,29 @@ impl Control {
 
         let mut request = None;
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-            if basic_components::button_group_clicked(ui, &self.variant_labels, variant) {
-                request = get_request(&self.nesting_info, variant);
+            if basic_components::button_group_clicked(ui, &self.variant_labels, variant_mut) {
+                request = get_request(&self.nesting_info, variant_mut);
             }
 
-            if reset::reset_button(ui, *variant != self.default_variant, &self.default_string)
-                .clicked()
+            if reset::reset_button(
+                ui,
+                *variant_mut != self.default_variant,
+                &self.default_string,
+            )
+            .clicked()
             {
                 request = get_request(&self.nesting_info, &self.default_variant);
             }
         });
 
-        let control = &self.variant_controls[&*variant];
+        let control = self.variant_controls.get_mut(&*variant_mut).unwrap();
         if !matches!(control, SettingControl::None) {
             ui.end_row();
 
             //fixes "cannot borrow `*session_variants` as mutable more than once at a time"
-            let variant = variant.clone();
+            let variant = variant_mut.clone();
             request = control
-                .ui(ui, &mut session_variants[&variant], false)
+                .ui(ui, &mut session_variants_mut[&variant], false)
                 .or(request);
         }
 

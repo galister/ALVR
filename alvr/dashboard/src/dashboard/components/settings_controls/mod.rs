@@ -32,6 +32,19 @@ fn set_single_value(
     Some(DashboardRequest::SetSingleValue { path, new_value })
 }
 
+fn grid_flow_inline(ui: &mut Ui, allow_inline: bool) {
+    if !allow_inline {
+        // Note: adding a space does not work
+        ui.label(" ");
+    }
+}
+
+fn grid_flow_block(ui: &mut Ui, allow_inline: bool) {
+    if allow_inline {
+        ui.end_row();
+    }
+}
+
 #[derive(Clone)]
 pub struct NestingInfo {
     pub path: Vec<PathSegment>,
@@ -42,6 +55,8 @@ pub enum SettingControl {
     Section(section::Control),
     Choice(choice::Control),
     Switch(switch::Control),
+    Boolean(boolean::Control),
+    Text(text::Control),
     None,
 }
 
@@ -65,10 +80,12 @@ impl SettingControl {
                 default_enabled,
                 *content,
             )),
-            // SchemaNode::Boolean { default } => todo!(),
+            SchemaNode::Boolean { default } => {
+                Self::Boolean(boolean::Control::new(nesting_info, default))
+            }
             // SchemaNode::Integer { default, min, max, step, gui } => todo!(),
             // SchemaNode::Float { default, min, max, step, gui } => todo!(),
-            // SchemaNode::Text { default } => todo!(),
+            SchemaNode::Text { default } => Self::Text(text::Control::new(nesting_info, default)),
             // SchemaNode::Array(_) => todo!(),
             // SchemaNode::Vector { default_element, default } => todo!(),
             // SchemaNode::Dictionary { default_key, default_value, default } => todo!(),
@@ -78,15 +95,17 @@ impl SettingControl {
 
     // inline: first field child, could be rendered beside the field label
     pub fn ui(
-        &self,
+        &mut self,
         ui: &mut Ui,
         session_fragment: &mut json::Value,
-        inline: bool,
+        allow_inline: bool,
     ) -> Option<DashboardRequest> {
         match self {
-            SettingControl::Section(control) => control.ui(ui, session_fragment, inline),
-            SettingControl::Choice(control) => control.ui(ui, session_fragment, inline),
-            SettingControl::Switch(control) => control.ui(ui, session_fragment, inline),
+            SettingControl::Section(control) => control.ui(ui, session_fragment, allow_inline),
+            SettingControl::Choice(control) => control.ui(ui, session_fragment, allow_inline),
+            SettingControl::Switch(control) => control.ui(ui, session_fragment, allow_inline),
+            SettingControl::Boolean(control) => control.ui(ui, session_fragment, allow_inline),
+            SettingControl::Text(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::None => None,
         }
     }
