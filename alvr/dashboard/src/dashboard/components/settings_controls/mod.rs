@@ -21,6 +21,17 @@ use settings_schema::SchemaNode;
 
 const INDENTATION_STEP: f32 = 20.0;
 
+fn set_single_value(
+    nesting_info: &NestingInfo,
+    leaf: PathSegment,
+    new_value: json::Value,
+) -> Option<DashboardRequest> {
+    let mut path = nesting_info.path.clone();
+    path.push(leaf);
+
+    Some(DashboardRequest::SetSingleValue { path, new_value })
+}
+
 #[derive(Clone)]
 pub struct NestingInfo {
     pub path: Vec<PathSegment>,
@@ -30,6 +41,7 @@ pub struct NestingInfo {
 pub enum SettingControl {
     Section(section::Control),
     Choice(choice::Control),
+    Switch(switch::Control),
     None,
 }
 
@@ -45,7 +57,14 @@ impl SettingControl {
                 gui,
             } => Self::Choice(choice::Control::new(nesting_info, default, variants, gui)),
             // SchemaNode::Optional { default_set, content } => todo!(),
-            // SchemaNode::Switch { default_enabled, content } => todo!(),
+            SchemaNode::Switch {
+                default_enabled,
+                content,
+            } => Self::Switch(switch::Control::new(
+                nesting_info,
+                default_enabled,
+                *content,
+            )),
             // SchemaNode::Boolean { default } => todo!(),
             // SchemaNode::Integer { default, min, max, step, gui } => todo!(),
             // SchemaNode::Float { default, min, max, step, gui } => todo!(),
@@ -67,6 +86,7 @@ impl SettingControl {
         match self {
             SettingControl::Section(control) => control.ui(ui, session_fragment, inline),
             SettingControl::Choice(control) => control.ui(ui, session_fragment, inline),
+            SettingControl::Switch(control) => control.ui(ui, session_fragment, inline),
             SettingControl::None => None,
         }
     }

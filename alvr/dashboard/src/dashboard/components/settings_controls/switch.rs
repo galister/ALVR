@@ -1,126 +1,94 @@
-// use super::{SettingContainer, SettingControl, SettingsContext, SettingsResponse};
-// use crate::{dashboard::basic_components, translation::TranslationBundle};
-// use egui::Ui;
-// use serde_json as json;
-// use settings_schema::{SchemaNode, SwitchDefault};
+use crate::dashboard::basic_components;
 
-// pub struct SwitchControl {
-//     default: bool,
-//     advanced: bool,
-//     control: Box<dyn SettingControl>,
-// }
+use super::{reset, NestingInfo, SettingControl};
+use alvr_sockets::DashboardRequest;
+use eframe::{
+    egui::{Layout, Ui},
+    emath::Align,
+};
+use serde_json as json;
+use settings_schema::SchemaNode;
 
-// impl SwitchControl {
-//     pub fn new(
-//         default_enabled: bool,
-//         content_advanced: bool,
-//         schema_content: SchemaNode,
-//         session: json::Value,
-//         trans_path: &str,
-//         trans: &TranslationBundle,
-//     ) -> Self {
-//         let session = json::from_value::<SwitchDefault<json::Value>>(session).unwrap();
-//         Self {
-//             default: default_enabled,
-//             advanced: content_advanced,
-//             control: super::create_setting_control(
-//                 schema_content,
-//                 session.content,
-//                 trans_path,
-//                 trans,
-//             ),
-//         }
-//     }
-// }
+pub struct Control {
+    nesting_info: NestingInfo,
+    default_enabled: bool,
+    default_string: String,
+    control: Box<SettingControl>,
+}
 
-// impl SettingControl for SwitchControl {
-//     fn ui(
-//         &mut self,
-//         ui: &mut Ui,
-//         session_fragment: json::Value,
-//         ctx: &SettingsContext,
-//     ) -> Option<SettingsResponse> {
-//         let mut session_switch =
-//             json::from_value::<SwitchDefault<json::Value>>(session_fragment).unwrap();
-//         let response = basic_components::switch(ui, &mut session_switch.enabled)
-//             .clicked()
-//             .then(|| super::into_fragment(&session_switch));
+impl Control {
+    pub fn new(
+        nesting_info: NestingInfo,
+        default_enabled: bool,
+        schema_content: SchemaNode,
+    ) -> Self {
+        let default_string = if default_enabled {
+            "ON".into()
+        } else {
+            "OFF".into()
+        };
 
-//         let response = super::reset_clicked(
-//             ui,
-//             &session_switch.enabled,
-//             &self.default,
-//             if self.default { "ON" } else { "OFF" },
-//             &ctx.t,
-//         )
-//         .then(|| {
-//             session_switch.enabled = self.default;
-//             super::into_fragment(&session_switch)
-//         })
-//         .or(response);
+        let control = {
+            let mut nesting_info = nesting_info.clone();
+            nesting_info.path.push("content".into());
 
-//         (session_switch.enabled && (!self.advanced || ctx.advanced))
-//             .then(|| {
-//                 super::map_fragment(
-//                     self.control.ui(ui, session_switch.content.clone(), ctx),
-//                     |content| {
-//                         session_switch.content = content;
-//                         session_switch
-//                     },
-//                 )
-//             })
-//             .flatten()
-//             .or(response)
-//     }
-// }
+            SettingControl::new(nesting_info, schema_content)
+        };
 
-// pub struct SwitchContainer {
-//     advanced: bool,
-//     container: Box<dyn SettingContainer>,
-// }
+        Self {
+            nesting_info,
+            default_enabled,
+            default_string,
+            control: Box::new(control),
+        }
+    }
 
-// impl SwitchContainer {
-//     pub fn new(
-//         content_advanced: bool,
-//         schema_content: SchemaNode,
-//         session: json::Value,
-//         trans_path: &str,
-//         trans: &TranslationBundle,
-//     ) -> Self {
-//         let session = json::from_value::<SwitchDefault<json::Value>>(session).unwrap();
-//         Self {
-//             advanced: content_advanced,
-//             container: super::create_setting_container(
-//                 schema_content,
-//                 session.content,
-//                 trans_path,
-//                 trans,
-//             ),
-//         }
-//     }
-// }
+    pub fn ui(
+        &self,
+        ui: &mut Ui,
+        session_fragment: &mut json::Value,
+        inline: bool,
+    ) -> Option<DashboardRequest> {
+        let session_switch = session_fragment.as_object_mut().unwrap();
 
-// impl SettingContainer for SwitchContainer {
-//     fn ui(
-//         &mut self,
-//         ui: &mut Ui,
-//         session_fragment: json::Value,
-//         context: &SettingsContext,
-//     ) -> Option<SettingsResponse> {
-//         let mut session_switch =
-//             json::from_value::<SwitchDefault<json::Value>>(session_fragment).unwrap();
+        // todo: can this be written better?
+        let enabled = if let json::Value::Bool(enabled) = &mut session_switch["enabled"] {
+            enabled
+        } else {
+            unreachable!()
+        };
 
-//         (session_switch.enabled && (!self.advanced || context.advanced))
-//             .then(|| {
-//                 super::map_fragment(
-//                     self.container
-//                         .ui(ui, session_switch.content.clone(), context),
-//                     |content| {
-//                         session_switch.content = content;
-//                         session_switch
-//                     },
-//                 )
-//             })
-//             .flatten()
-//     }
-// }
+        if !inline {
+            ui.add_space(1.0);
+        }
+
+        let mut request = None;
+
+        fn get_request(nesting_info: &NestingInfo, enabled: bool) -> Option<DashboardRequest> {
+            super::set_single_value(nesting_info, "enabled".into(), json::Value::Bool(enabled))
+        }
+
+        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+            if basic_components::switch(ui, enabled).clicked() {
+                request = get_request(&self.nesting_info, *enabled);
+            }
+
+            if reset::reset_button(ui, *enabled != self.default_enabled, &self.default_string)
+                .clicked()
+            {
+                request = get_request(&self.nesting_info, self.default_enabled);
+            }
+        });
+
+        if *enabled {
+            ui.end_row();
+
+            request = self
+                .control
+                .ui(ui, &mut session_switch["content"], false)
+                .or(request);
+        }
+
+        request
+    }
+}
