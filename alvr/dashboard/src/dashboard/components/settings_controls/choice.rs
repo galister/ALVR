@@ -1,64 +1,131 @@
-// use crate::{dashboard::basic_components, DisplayString};
-// use super::{
-//     EmptyContainer, EmptyControl, SettingContainer, SettingControl, SettingsContext,
-//     SettingsResponse,
-// };
-// use egui::Ui;
-// use serde_json as json;
-// use settings_schema::EntryData;
-// use std::collections::HashMap;
+use std::collections::HashMap;
 
-// pub struct ChoiceControl {
-//     default: DisplayString,
-//     variant_labels: Vec<DisplayString>,
-//     controls: HashMap<String, (Box<dyn SettingControl>, bool)>,
-// }
+use super::{NestingInfo, SettingControl};
+use crate::dashboard::{basic_components, DisplayString};
+use alvr_sockets::DashboardRequest;
+use eframe::{
+    egui::{Layout, Ui},
+    emath::Align,
+};
+use serde_json as json;
+use settings_schema::{ChoiceControlType, NamedEntry, SchemaNode};
 
-// impl ChoiceControl {
-//     pub fn new(
-//         default: String,
-//         variants_schema: Vec<(String, Option<EntryData>)>,
-//         session_fragment: json::Value,
-//     ) -> Self {
-//         let mut session_variants =
-//             json::from_value::<HashMap<String, json::Value>>(session_fragment).unwrap();
+fn get_display_name(id: &str, strings: &HashMap<String, String>) -> String {
+    strings.get("display_name").cloned().unwrap_or_else(|| {
+        let mut chars = id.chars();
 
-//         Self {
-//             default: DisplayString {
-//                 id: default.clone(),
-//                 display: trans.attribute(trans_path, &default),
-//             },
-//             variant_labels: variants_schema
-//                 .iter()
-//                 .map(|(id, _)| DisplayString {
-//                     id: id.clone(),
-//                     display: trans.attribute(trans_path, id),
-//                 })
-//                 .collect(),
-//             controls: variants_schema
-//                 .into_iter()
-//                 .map(|(id, data)| {
-//                     if let Some(data) = data {
-//                         (
-//                             id.clone(),
-//                             (
-//                                 super::create_setting_control(
-//                                     data.content,
-//                                     session_variants.remove(&id).unwrap(),
-//                                     &format!("{}-{}", trans_path, id),
-//                                     trans,
-//                                 ),
-//                                 data.advanced,
-//                             ),
-//                         )
-//                     } else {
-//                         (id, (Box::new(EmptyControl) as _, false))
-//                     }
-//                 })
-//                 .collect(),
-//         }
-//     }
-// }
+        let mut new_chars = vec![chars.next().unwrap()];
+        for c in chars {
+            let new_c = c.to_ascii_lowercase();
+
+            if new_c != c {
+                new_chars.push(' ');
+            }
+
+            new_chars.push(new_c);
+        }
+
+        new_chars.into_iter().collect::<String>()
+    })
+}
+
+pub struct Control {
+    nesting_info: NestingInfo,
+    default_variant: String,
+    variant_labels: Vec<DisplayString>,
+    variant_controls: HashMap<String, SettingControl>,
+    gui: ChoiceControlType,
+}
+
+impl Control {
+    pub fn new(
+        nesting_info: NestingInfo,
+        default: String,
+        schema_variants: Vec<NamedEntry<Option<SchemaNode>>>,
+        gui: Option<ChoiceControlType>,
+    ) -> Self {
+        let variant_labels = schema_variants
+            .iter()
+            .map(|entry| DisplayString {
+                id: entry.name.clone(),
+                display: get_display_name(&entry.name, &entry.strings),
+            })
+            .collect();
+
+        let variant_controls = schema_variants
+            .into_iter()
+            .map(|entry| {
+                let mut nesting_info = nesting_info.clone();
+                nesting_info.path.push(entry.name.clone().into());
+
+                let control = if let Some(schema) = entry.content {
+                    SettingControl::new(nesting_info, schema)
+                } else {
+                    SettingControl::None
+                };
+
+                (entry.name, control)
+            })
+            .collect();
+
+        Self {
+            nesting_info,
+            default_variant: default,
+            variant_labels,
+            variant_controls,
+            gui: gui.unwrap_or(ChoiceControlType::ButtonGroup),
+        }
+    }
+
+    pub fn ui(
+        &self,
+        ui: &mut Ui,
+        session_fragment: &mut json::Value,
+        inline: bool,
+    ) -> Option<DashboardRequest> {
+        let session_variants = session_fragment.as_object_mut().unwrap();
+
+        // todo: can this be written better?
+        let variant = if let json::Value::String(string) = &mut session_variants["variant"] {
+            string
+        } else {
+            unreachable!()
+        };
+
+        if !inline {
+            ui.add_space(1.0);
+        }
+
+        let mut request = None;
+        let clicked = ui
+            .with_layout(Layout::left_to_right(Align::Center), |ui| {
+                basic_components::button_group_clicked(ui, &self.variant_labels, variant)
+            })
+            .inner;
+
+        if clicked {
+            let mut path = self.nesting_info.path.clone();
+            path.push("variant".into());
+
+            let new_value = json::Value::String(variant.clone());
+
+            request = Some(DashboardRequest::SetSingleValue { path, new_value });
+        }
+
+        let control = &self.variant_controls[&*variant];
+        if !matches!(control, SettingControl::None) {
+            ui.end_row();
+
+            //fixes "cannot borrow `*session_variants` as mutable more than once at a time"
+            let variant = variant.clone();
+            request = control
+                .ui(ui, &mut session_variants[&variant], false)
+                .or(request);
+        }
+
+        request
+    }
+}
 
 // impl SettingControl for ChoiceControl {
 //     fn ui(

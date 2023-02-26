@@ -276,7 +276,7 @@ impl eframe::App for Dashboard {
                                 RichText::new(*self.tab_labels.get(&self.selected_tab).unwrap())
                                     .size(25.0),
                             );
-                            ScrollArea::new([true, true])
+                            ScrollArea::new([false, true])
                                 .show(ui, |ui| match self.selected_tab {
                                     Tab::Connections => self.connections_tab.ui(
                                         ui,

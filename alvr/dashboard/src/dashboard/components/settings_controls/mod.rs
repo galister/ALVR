@@ -18,7 +18,6 @@ use eframe::egui::Ui;
 // use serde::Serialize;
 use serde_json as json;
 use settings_schema::SchemaNode;
-use std::collections::HashMap;
 
 const INDENTATION_STEP: f32 = 20.0;
 
@@ -28,17 +27,10 @@ pub struct NestingInfo {
     pub indentation_level: usize,
 }
 
-fn get_display_name(id: &str, strings: &HashMap<String, String>) -> String {
-    strings.get("display_name").cloned().unwrap_or_else(|| {
-        let mut chars = id.chars();
-        chars.next().unwrap().to_uppercase().collect::<String>()
-            + chars.as_str().replace('_', " ").as_str()
-    })
-}
-
 pub enum SettingControl {
     Section(section::Control),
-    Todo,
+    Choice(choice::Control),
+    None,
 }
 
 impl SettingControl {
@@ -47,7 +39,11 @@ impl SettingControl {
             SchemaNode::Section(entries) => {
                 Self::Section(section::Control::new(nesting_info, entries))
             }
-            // SchemaNode::Choice { default, variants, gui } => todo!(),
+            SchemaNode::Choice {
+                default,
+                variants,
+                gui,
+            } => Self::Choice(choice::Control::new(nesting_info, default, variants, gui)),
             // SchemaNode::Optional { default_set, content } => todo!(),
             // SchemaNode::Switch { default_enabled, content } => todo!(),
             // SchemaNode::Boolean { default } => todo!(),
@@ -57,14 +53,21 @@ impl SettingControl {
             // SchemaNode::Array(_) => todo!(),
             // SchemaNode::Vector { default_element, default } => todo!(),
             // SchemaNode::Dictionary { default_key, default_value, default } => todo!(),
-            _ => Self::Todo,
+            _ => Self::None,
         }
     }
 
-    pub fn ui(&self, ui: &mut Ui, session_fragment: &json::Value) -> Option<DashboardRequest> {
+    // inline: first field child, could be rendered beside the field label
+    pub fn ui(
+        &self,
+        ui: &mut Ui,
+        session_fragment: &mut json::Value,
+        inline: bool,
+    ) -> Option<DashboardRequest> {
         match self {
-            SettingControl::Section(control) => control.ui(ui, session_fragment),
-            SettingControl::Todo => None,
+            SettingControl::Section(control) => control.ui(ui, session_fragment, inline),
+            SettingControl::Choice(control) => control.ui(ui, session_fragment, inline),
+            SettingControl::None => None,
         }
     }
 }

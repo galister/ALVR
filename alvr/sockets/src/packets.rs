@@ -135,6 +135,24 @@ pub enum PathSegment {
     Index(usize),
 }
 
+impl From<&str> for PathSegment {
+    fn from(value: &str) -> Self {
+        PathSegment::Name(value.to_owned())
+    }
+}
+
+impl From<String> for PathSegment {
+    fn from(value: String) -> Self {
+        PathSegment::Name(value)
+    }
+}
+
+impl From<usize> for PathSegment {
+    fn from(value: usize) -> Self {
+        PathSegment::Index(value)
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ClientListAction {
     AddIfMissing {

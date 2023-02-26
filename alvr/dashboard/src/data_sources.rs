@@ -181,6 +181,13 @@ pub fn data_interop_thread(
 
                             send_session(&sender, data_manager);
                         }
+                        DashboardRequest::SetSingleValue { path, new_value } => {
+                            if let Err(e) = data_manager.set_single_value(path.clone(), new_value) {
+                                error!("Path: {path:?}, error: {e}")
+                            }
+
+                            send_session(&sender, data_manager);
+                        }
                         DashboardRequest::ExecuteScript(code) => {
                             if let Err(e) = data_manager.execute_script(&code) {
                                 error!("Error executing script: {e}");

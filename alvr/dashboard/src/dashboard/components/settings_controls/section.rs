@@ -1,9 +1,19 @@
+use std::collections::HashMap;
+
 use super::{NestingInfo, SettingControl, INDENTATION_STEP};
 use crate::dashboard::DisplayString;
-use alvr_sockets::{DashboardRequest, PathSegment};
+use alvr_sockets::DashboardRequest;
 use eframe::egui::Ui;
 use serde_json as json;
 use settings_schema::{NamedEntry, SchemaNode};
+
+fn get_display_name(id: &str, strings: &HashMap<String, String>) -> String {
+    strings.get("display_name").cloned().unwrap_or_else(|| {
+        let mut chars = id.chars();
+        chars.next().unwrap().to_uppercase().collect::<String>()
+            + chars.as_str().replace('_', " ").as_str()
+    })
+}
 
 struct Entry {
     id: DisplayString,
@@ -18,18 +28,21 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn new(nesting_info: NestingInfo, schema_entries: Vec<NamedEntry<SchemaNode>>) -> Self {
+    pub fn new(mut nesting_info: NestingInfo, schema_entries: Vec<NamedEntry<SchemaNode>>) -> Self {
+        if nesting_info.path.len() > 1 {
+            nesting_info.indentation_level += 1;
+        }
+
         let entries = schema_entries
             .into_iter()
             .map(|entry| {
                 let id = entry.name;
-                let display = super::get_display_name(&id, &entry.strings);
+                let display = get_display_name(&id, &entry.strings);
                 let help = entry.strings.get("help").cloned();
                 let notice = entry.strings.get("notice").cloned();
 
                 let mut nesting_info = nesting_info.clone();
-                nesting_info.path.push(PathSegment::Name(id.clone()));
-                nesting_info.indentation_level += 1;
+                nesting_info.path.push(id.clone().into());
 
                 Entry {
                     id: DisplayString { id, display },
@@ -46,28 +59,33 @@ impl Control {
         }
     }
 
-    pub fn ui(&self, ui: &mut Ui, session_fragment: &json::Value) -> Option<DashboardRequest> {
-        // dbg!(session_fragment);
-        let session_fragments = session_fragment.as_object().unwrap();
+    pub fn ui(
+        &self,
+        ui: &mut Ui,
+        session_fragment: &mut json::Value,
+        inline: bool,
+    ) -> Option<DashboardRequest> {
+        let session_fragments = session_fragment.as_object_mut().unwrap();
+
+        if inline {
+            // there are no inline controls, go to new row
+            ui.end_row();
+        }
 
         let mut response = None;
         for (i, entry) in self.entries.iter().enumerate() {
-            if i > 0 || self.nesting_info.indentation_level != 0 {
-                ui.end_row();
-            }
-
             ui.horizontal(|ui| {
                 ui.add_space(INDENTATION_STEP * self.nesting_info.indentation_level as f32);
                 ui.label(&entry.id.display);
             });
             response = entry
                 .control
-                .ui(ui, &session_fragments[&entry.id.id])
+                .ui(ui, &mut session_fragments[&entry.id.id], true)
                 .or(response);
 
-            // if i < self.entries.len() - 1 {
-            //     ui.end_row();
-            // }
+            if i != self.entries.len() - 1 {
+                ui.end_row();
+            }
         }
 
         response
