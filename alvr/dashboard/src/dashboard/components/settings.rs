@@ -2,12 +2,14 @@
 use super::{presets::Presets, NestingInfo, SettingControl};
 use crate::dashboard::{get_id, DashboardRequest};
 use alvr_session::{SessionSettings, Settings};
+use alvr_sockets::AudioDevicesList;
 use eframe::egui::{Grid, ScrollArea, Ui};
 use serde_json as json;
 
 pub struct SettingsTab {
     advanced_grid_id: usize,
     session_settings_json: json::Value,
+    presets: Presets,
     root_control: SettingControl,
 }
 
@@ -24,37 +26,44 @@ impl SettingsTab {
         Self {
             advanced_grid_id: get_id(),
             session_settings_json: json::to_value(session_settings).unwrap(),
+            presets: Presets::new(),
             root_control: SettingControl::new(nesting_info, schema),
         }
     }
 
     pub fn update_session(&mut self, session_settings: &SessionSettings) {
         self.session_settings_json = json::to_value(session_settings).unwrap();
+        self.presets.session_updated(session_settings);
     }
 
-    pub fn ui(&mut self, ui: &mut Ui) -> Option<DashboardRequest> {
+    pub fn update_audio_devices(&mut self, list: AudioDevicesList) {
+        self.presets.update_audio_devices(list);
+    }
+
+    pub fn ui(&mut self, ui: &mut Ui) -> Vec<DashboardRequest> {
         ui.heading("Presets");
-        let request = Presets::ui(ui);
+        let mut requests = self.presets.ui(ui);
 
         ui.add_space(15.0);
 
         ui.heading("Advanced");
-        ScrollArea::new([true, false])
-            .show(ui, |ui| {
-                Grid::new(self.advanced_grid_id)
-                    .striped(true)
-                    .num_columns(2)
-                    .show(ui, |ui| {
-                        let request =
-                            self.root_control
-                                .ui(ui, &mut self.session_settings_json, false);
-                        ui.end_row();
+        ScrollArea::new([true, false]).show(ui, |ui| {
+            Grid::new(self.advanced_grid_id)
+                .striped(true)
+                .num_columns(2)
+                .show(ui, |ui| {
+                    let request = self
+                        .root_control
+                        .ui(ui, &mut self.session_settings_json, false);
 
-                        request
-                    })
-                    .inner
-            })
-            .inner
-            .or(request)
+                    if let Some(request) = request {
+                        requests.push(request);
+                    }
+
+                    ui.end_row();
+                })
+        });
+
+        requests
     }
 }

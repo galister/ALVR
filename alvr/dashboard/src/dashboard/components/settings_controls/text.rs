@@ -8,18 +8,18 @@ use serde_json as json;
 
 pub struct Control {
     nesting_info: NestingInfo,
-    temp_value: Option<String>,
+    editing_value: Option<String>,
     default: String,
     default_string: String,
 }
 
 impl Control {
     pub fn new(nesting_info: NestingInfo, default: String) -> Self {
-        let default_string = format!("\"{}\"", default);
+        let default_string = format!("\"{default}\"");
 
         Self {
             nesting_info,
-            temp_value: None,
+            editing_value: None,
             default,
             default_string,
         }
@@ -50,14 +50,14 @@ impl Control {
         }
 
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-            if let Some(temp_value_mut) = &mut self.temp_value {
-                if ui.text_edit_singleline(temp_value_mut).lost_focus() {
-                    request = get_request(&self.nesting_info, temp_value_mut);
-                    *text_mut = temp_value_mut.clone();
-                    self.temp_value = None;
+            if let Some(editing_value_mut) = &mut self.editing_value {
+                if ui.text_edit_singleline(editing_value_mut).lost_focus() {
+                    request = get_request(&self.nesting_info, editing_value_mut);
+                    *text_mut = editing_value_mut.clone();
+                    self.editing_value = None;
                 }
             } else if ui.text_edit_singleline(text_mut).gained_focus() {
-                self.temp_value = Some(text_mut.clone());
+                self.editing_value = Some(text_mut.clone());
             }
 
             if reset::reset_button(ui, *text_mut != self.default, &self.default_string).clicked() {

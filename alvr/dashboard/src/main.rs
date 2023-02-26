@@ -5,7 +5,7 @@ mod data_sources;
 mod launcher;
 mod theme;
 
-use alvr_sockets::DashboardRequest;
+use alvr_sockets::{AudioDevicesList, DashboardRequest};
 use dashboard::Dashboard;
 use std::{sync::mpsc, thread};
 
@@ -13,8 +13,7 @@ pub enum ServerEvent {
     PingResponseConnected,
     PingResponseDisconnected,
     Event(alvr_events::Event),
-    AudioOutputDevices(Vec<String>),
-    AudioInputDevices(Vec<String>),
+    AudioDevicesUpdated(AudioDevicesList),
 }
 
 fn main() {

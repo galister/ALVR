@@ -5,6 +5,106 @@
 // use settings_schema::NumericGuiType;
 // use std::ops::RangeInclusive;
 
+use std::{fmt::Display, str::FromStr};
+
+use super::{reset, NestingInfo};
+use alvr_sockets::DashboardRequest;
+use eframe::{
+    egui::{Layout, Ui},
+    emath::Align,
+};
+use json::Number;
+use serde_json as json;
+use settings_schema::NumericGuiType;
+
+pub struct Control {
+    nesting_info: NestingInfo,
+    prev_value: Number,
+    prev_string_value: String,
+    editing_value: Option<String>,
+    default: Number,
+    default_string: String,
+    gui: NumericGuiType,
+}
+
+impl Control {
+    pub fn new<T: Display>(
+        nesting_info: NestingInfo,
+        default: T,
+        min: Option<T>,
+        max: Option<T>,
+        step: Option<T>,
+        gui: Option<NumericGuiType>,
+    ) -> Self {
+        let default_string = format!("\"{default}\"");
+
+        Self {
+            nesting_info,
+            prev_value: Number::from_str("0").unwrap(),
+            prev_string_value: "".into(),
+            editing_value: None,
+            default: Number::from_str(&default.to_string()).unwrap(),
+            default_string,
+            gui: gui.unwrap_or(NumericGuiType::TextBox),
+        }
+    }
+
+    pub fn ui(
+        &mut self,
+        ui: &mut Ui,
+        session_fragment: &mut json::Value,
+        allow_inline: bool,
+    ) -> Option<DashboardRequest> {
+        super::grid_flow_inline(ui, allow_inline);
+
+        // todo: can this be written better?
+        let session_number = if let json::Value::Number(number) = session_fragment.clone() {
+            number
+        } else {
+            unreachable!()
+        };
+
+        let mut request = None;
+
+        fn get_request(nesting_info: &NestingInfo, number: Number) -> Option<DashboardRequest> {
+            Some(DashboardRequest::SetSingleValue {
+                path: nesting_info.path.clone(),
+                new_value: json::Value::Number(number),
+            })
+        }
+
+        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+            if session_number != self.prev_value {
+                self.prev_value = session_number.clone();
+                self.prev_string_value = self.prev_value.to_string();
+            }
+
+            if let Some(editing_value_mut) = &mut self.editing_value {
+                if ui.text_edit_singleline(editing_value_mut).lost_focus() {
+                    if let Ok(number) = Number::from_str(editing_value_mut) {
+                        request = get_request(&self.nesting_info, number.clone());
+                        *session_fragment = json::Value::Number(number);
+                    }
+                    self.editing_value = None;
+                }
+            } else if ui
+                .text_edit_singleline(&mut self.prev_string_value)
+                .gained_focus()
+            {
+                self.editing_value = Some(self.prev_string_value.clone());
+            }
+
+            if reset::reset_button(ui, session_number != self.default, &self.default_string)
+                .clicked()
+            {
+                request = get_request(&self.nesting_info, self.default.clone());
+            }
+        });
+
+        request
+    }
+}
+
 // #[derive(Clone)]
 // pub enum NumericWidgetType<T> {
 //     Slider {

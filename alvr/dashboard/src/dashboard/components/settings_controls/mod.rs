@@ -15,7 +15,6 @@ pub mod vector;
 
 use alvr_sockets::{DashboardRequest, PathSegment};
 use eframe::egui::Ui;
-// use serde::Serialize;
 use serde_json as json;
 use settings_schema::SchemaNode;
 
@@ -57,6 +56,7 @@ pub enum SettingControl {
     Switch(switch::Control),
     Boolean(boolean::Control),
     Text(text::Control),
+    Numeric(numeric::Control),
     None,
 }
 
@@ -83,8 +83,34 @@ impl SettingControl {
             SchemaNode::Boolean { default } => {
                 Self::Boolean(boolean::Control::new(nesting_info, default))
             }
-            // SchemaNode::Integer { default, min, max, step, gui } => todo!(),
-            // SchemaNode::Float { default, min, max, step, gui } => todo!(),
+            SchemaNode::Integer {
+                default,
+                min,
+                max,
+                step,
+                gui,
+            } => Self::Numeric(numeric::Control::new(
+                nesting_info,
+                default,
+                min,
+                max,
+                step,
+                gui,
+            )),
+            SchemaNode::Float {
+                default,
+                min,
+                max,
+                step,
+                gui,
+            } => Self::Numeric(numeric::Control::new(
+                nesting_info,
+                default,
+                min,
+                max,
+                step,
+                gui,
+            )),
             SchemaNode::Text { default } => Self::Text(text::Control::new(nesting_info, default)),
             // SchemaNode::Array(_) => todo!(),
             // SchemaNode::Vector { default_element, default } => todo!(),
@@ -106,6 +132,7 @@ impl SettingControl {
             SettingControl::Switch(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Boolean(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Text(control) => control.ui(ui, session_fragment, allow_inline),
+            SettingControl::Numeric(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::None => None,
         }
     }

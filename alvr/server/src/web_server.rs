@@ -132,14 +132,9 @@ async fn http_api(
                     DashboardRequest::UpdateClientList { hostname, action } => SERVER_DATA_MANAGER
                         .write()
                         .update_client_list(hostname, action),
-                    DashboardRequest::GetAudioOutputDevices => {
+                    DashboardRequest::GetAudioDevices => {
                         if let Ok(list) = SERVER_DATA_MANAGER.read().get_audio_devices_list() {
-                            return reply_json(&list.output);
-                        }
-                    }
-                    DashboardRequest::GetAudioInputDevices => {
-                        if let Ok(list) = SERVER_DATA_MANAGER.read().get_audio_devices_list() {
-                            return reply_json(&list.input);
+                            return reply_json(&list);
                         }
                     }
                     DashboardRequest::RestartSteamVR => crate::notify_restart_driver(),

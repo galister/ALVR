@@ -83,6 +83,9 @@ impl Dashboard {
         dashboard_requests_sender
             .send(DashboardRequest::GetSession)
             .unwrap();
+        dashboard_requests_sender
+            .send(DashboardRequest::GetAudioDevices)
+            .unwrap();
 
         theme::set_theme(&creation_context.egui_ctx);
 
@@ -165,16 +168,21 @@ impl eframe::App for Dashboard {
                 ServerEvent::PingResponseDisconnected => {
                     self.connected_to_server = false;
                 }
-                ServerEvent::AudioOutputDevices(_) => todo!(),
-                ServerEvent::AudioInputDevices(_) => todo!(),
+                ServerEvent::AudioDevicesUpdated(list) => {
+                    self.settings_tab.update_audio_devices(list);
+                }
             }
         }
 
-        let request = match &mut self.setup_wizard {
+        let mut requests = vec![];
+
+        match &mut self.setup_wizard {
             Some(setup_wizard) => {
-                CentralPanel::default()
-                    .show(ctx, |ui| setup_wizard.ui(ui))
-                    .inner
+                CentralPanel::default().show(ctx, |ui| {
+                    if let Some(request) = setup_wizard.ui(ui) {
+                        requests.push(request);
+                    }
+                });
             }
             None => {
                 if match &self.notification {
@@ -226,9 +234,7 @@ impl eframe::App for Dashboard {
                     self.notification = None;
                 }
 
-                // let mut outer_margin = Margin::default();
-
-                let request = SidePanel::left("side_panel")
+                SidePanel::left("side_panel")
                     .resizable(false)
                     .frame(
                         Frame::none()
@@ -255,15 +261,11 @@ impl eframe::App for Dashboard {
                             |ui| {
                                 ui.add_space(5.0);
                                 if ui.button("Restart SteamVR").clicked() {
-                                    Some(DashboardRequest::RestartSteamVR)
-                                } else {
-                                    None
+                                    requests.push(DashboardRequest::RestartSteamVR);
                                 }
                             },
                         )
-                        .inner
-                    })
-                    .inner;
+                    });
 
                 CentralPanel::default()
                     .frame(
@@ -277,29 +279,46 @@ impl eframe::App for Dashboard {
                                 RichText::new(*self.tab_labels.get(&self.selected_tab).unwrap())
                                     .size(25.0),
                             );
-                            ScrollArea::new([false, true])
-                                .show(ui, |ui| match self.selected_tab {
-                                    Tab::Connections => self.connections_tab.ui(
+                            ScrollArea::new([false, true]).show(ui, |ui| match self.selected_tab {
+                                Tab::Connections => {
+                                    if let Some(request) = self.connections_tab.ui(
                                         ui,
                                         &self.session,
                                         self.connected_to_server,
-                                    ),
-                                    Tab::Statistics => self.statistics_tab.ui(ui),
-                                    Tab::Settings => self.settings_tab.ui(ui),
-                                    Tab::Installation => self.installation_tab.ui(ui, &vec![]),
-                                    Tab::Logs => self.logs_tab.ui(ui),
-                                    Tab::About => self.about_tab.ui(ui, &self.session),
-                                })
-                                .inner
+                                    ) {
+                                        requests.push(request);
+                                    }
+                                }
+                                Tab::Statistics => {
+                                    if let Some(request) = self.statistics_tab.ui(ui) {
+                                        requests.push(request);
+                                    }
+                                }
+                                Tab::Settings => {
+                                    requests.extend(self.settings_tab.ui(ui));
+                                }
+                                Tab::Installation => {
+                                    if let Some(request) = self.installation_tab.ui(ui, &vec![]) {
+                                        requests.push(request);
+                                    }
+                                }
+                                Tab::Logs => {
+                                    if let Some(request) = self.logs_tab.ui(ui) {
+                                        requests.push(request);
+                                    }
+                                }
+                                Tab::About => {
+                                    if let Some(request) = self.about_tab.ui(ui, &self.session) {
+                                        requests.push(request);
+                                    }
+                                }
+                            })
                         })
-                        .inner
-                    })
-                    .inner
-                    .or(request)
+                    });
             }
         };
 
-        if let Some(request) = request {
+        for request in requests {
             self.dashboard_requests_sender.send(request).ok();
         }
     }

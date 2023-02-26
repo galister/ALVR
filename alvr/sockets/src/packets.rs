@@ -117,7 +117,7 @@ pub struct Haptics {
     pub amplitude: f32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct AudioDevicesList {
     pub output: Vec<String>,
     pub input: Vec<String>,
@@ -151,6 +151,11 @@ impl From<usize> for PathSegment {
     fn from(value: usize) -> Self {
         PathSegment::Index(value)
     }
+}
+
+// todo: support indices
+pub fn parse_path(path: &str) -> Vec<PathSegment> {
+    path.split('.').map(|s| s.into()).collect()
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -191,8 +196,7 @@ pub enum DashboardRequest {
         hostname: String,
         action: ClientListAction,
     },
-    GetAudioOutputDevices,
-    GetAudioInputDevices,
+    GetAudioDevices,
     RestartSteamVR,
     Log(LogEvent),
 }
@@ -200,6 +204,5 @@ pub enum DashboardRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ServerResponse {
     Ok,
-    AudioOutputDevices(Vec<String>),
-    AudioInputDevices(Vec<String>),
+    AudioDevices(AudioDevicesList),
 }

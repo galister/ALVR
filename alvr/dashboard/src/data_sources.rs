@@ -136,21 +136,8 @@ pub fn data_interop_thread(
             Ok(response) => {
                 if let Ok(response) = response.into_json::<ServerResponse>() {
                     match response {
-                        ServerResponse::AudioOutputDevices(devices) => {
-                            if sender
-                                .send(ServerEvent::AudioOutputDevices(devices))
-                                .is_err()
-                            {
-                                break;
-                            }
-                        }
-                        ServerResponse::AudioInputDevices(devices) => {
-                            if sender
-                                .send(ServerEvent::AudioInputDevices(devices))
-                                .is_err()
-                            {
-                                break;
-                            }
+                        ServerResponse::AudioDevices(list) => {
+                            sender.send(ServerEvent::AudioDevicesUpdated(list)).ok();
                         }
                         _ => (),
                     }
@@ -200,18 +187,9 @@ pub fn data_interop_thread(
 
                             send_session(&sender, data_manager);
                         }
-                        DashboardRequest::GetAudioOutputDevices => {
+                        DashboardRequest::GetAudioDevices => {
                             if let Ok(list) = data_manager.get_audio_devices_list() {
-                                sender
-                                    .send(ServerEvent::AudioOutputDevices(list.output))
-                                    .ok();
-                            }
-                        }
-                        DashboardRequest::GetAudioInputDevices => {
-                            if let Ok(list) = data_manager.get_audio_devices_list() {
-                                sender
-                                    .send(ServerEvent::AudioOutputDevices(list.input))
-                                    .ok();
+                                sender.send(ServerEvent::AudioDevicesUpdated(list)).ok();
                             }
                         }
                         _ => (),
