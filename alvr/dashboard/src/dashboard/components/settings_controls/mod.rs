@@ -33,7 +33,7 @@ fn set_single_value(
 
 fn grid_flow_inline(ui: &mut Ui, allow_inline: bool) {
     if !allow_inline {
-        // Note: adding a space does not work
+        // Note: ui.add_space() does not work
         ui.label(" ");
     }
 }
@@ -53,6 +53,7 @@ pub struct NestingInfo {
 pub enum SettingControl {
     Section(section::Control),
     Choice(choice::Control),
+    Optional(optional::Control),
     Switch(switch::Control),
     Boolean(boolean::Control),
     Text(text::Control),
@@ -71,7 +72,10 @@ impl SettingControl {
                 variants,
                 gui,
             } => Self::Choice(choice::Control::new(nesting_info, default, variants, gui)),
-            // SchemaNode::Optional { default_set, content } => todo!(),
+            SchemaNode::Optional {
+                default_set,
+                content,
+            } => Self::Optional(optional::Control::new(nesting_info, default_set, *content)),
             SchemaNode::Switch {
                 default_enabled,
                 content,
@@ -129,6 +133,7 @@ impl SettingControl {
         match self {
             SettingControl::Section(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Choice(control) => control.ui(ui, session_fragment, allow_inline),
+            SettingControl::Optional(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Switch(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Boolean(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Text(control) => control.ui(ui, session_fragment, allow_inline),

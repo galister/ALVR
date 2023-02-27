@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
-use settings_schema::{DictionaryDefault, SettingsSchema, Switch, SwitchDefault};
+use settings_schema::{DictionaryDefault, OptionalDefault, SettingsSchema, Switch, SwitchDefault};
 
 include!(concat!(env!("OUT_DIR"), "/openvr_property_keys.rs"));
 
@@ -561,6 +561,8 @@ pub struct ExtraDesc {
     pub capture_frame_dir: String,
 
     pub patches: Patches,
+
+    pub optional_test: Option<usize>,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
@@ -888,6 +890,10 @@ pub fn session_settings_default() -> SettingsDefault {
             patches: PatchesDefault {
                 remove_sync_popup: false,
                 linux_async_reprojection: false,
+            },
+            optional_test: OptionalDefault {
+                set: false,
+                content: 5,
             },
         },
     }
