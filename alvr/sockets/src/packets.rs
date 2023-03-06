@@ -197,7 +197,7 @@ pub enum DashboardRequest {
         action: ClientListAction,
     },
     GetAudioDevices,
-    RestartSteamVR,
+    RestartSteamvr,
     Log(LogEvent),
 }
 

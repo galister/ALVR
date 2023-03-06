@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
-use settings_schema::{DictionaryDefault, OptionalDefault, SettingsSchema, Switch, SwitchDefault};
+use settings_schema::{DictionaryDefault, SettingsSchema, Switch, SwitchDefault};
 
 include!(concat!(env!("OUT_DIR"), "/openvr_property_keys.rs"));
 
@@ -532,6 +532,13 @@ pub struct ConnectionDesc {
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
+pub enum DriverLaunchAction {
+    UnregisterOtherDriversAtStartup,
+    UnregisterAlvrAtShutdown,
+    NoAction,
+}
+
+#[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub enum LogLevel {
     Error,
     Warning,
@@ -555,14 +562,16 @@ pub struct ExtraDesc {
     pub log_haptics: bool,
     pub save_video_stream: bool,
 
+    pub driver_launch_action: DriverLaunchAction,
+
     pub notification_level: LogLevel,
     pub exclude_notifications_without_id: bool,
 
     pub capture_frame_dir: String,
 
-    pub patches: Patches,
+    pub open_setup_wizard: bool,
 
-    pub optional_test: Option<usize>,
+    pub patches: Patches,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
@@ -874,6 +883,9 @@ pub fn session_settings_default() -> SettingsDefault {
             log_button_presses: false,
             log_haptics: false,
             save_video_stream: false,
+            driver_launch_action: DriverLaunchActionDefault {
+                variant: DriverLaunchActionDefaultVariant::UnregisterOtherDriversAtStartup,
+            },
             notification_level: LogLevelDefault {
                 variant: if cfg!(debug_assertions) {
                     LogLevelDefaultVariant::Info
@@ -891,10 +903,7 @@ pub fn session_settings_default() -> SettingsDefault {
                 remove_sync_popup: false,
                 linux_async_reprojection: false,
             },
-            optional_test: OptionalDefault {
-                set: false,
-                content: 5,
-            },
+            open_setup_wizard: alvr_common::is_stable() || alvr_common::is_nightly(),
         },
     }
 }

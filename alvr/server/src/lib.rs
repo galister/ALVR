@@ -189,38 +189,37 @@ pub fn create_recording_file() {
     }
 }
 
-pub fn shutdown_runtimes() {
-    alvr_events::send_event(EventType::ServerQuitting);
-
-    // Shutsdown all connection runtimes
+pub fn shutdown_tasks() {
+    // Invoke connection runtimes shutdown
+    // todo: block until they shutdown
     IS_ALIVE.set(false);
+
+    if let Some(backup) = SERVER_DATA_MANAGER
+        .write()
+        .session_mut()
+        .drivers_backup
+        .take()
+    {
+        alvr_commands::driver_registration(&backup.other_paths, true).ok();
+        alvr_commands::driver_registration(&[backup.alvr_path], false).ok();
+    }
 
     WEBSERVER_RUNTIME.lock().take();
 }
 
-pub fn notify_shutdown_driver() {
+pub fn notify_restart_driver() {
+    alvr_events::send_event(EventType::ServerRequestsSelfRestart);
+
     thread::spawn(|| {
         RESTART_NOTIFIER.notify_waiters();
 
         // give time to the control loop to send the restart packet (not crucial)
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(200));
 
-        shutdown_runtimes();
+        shutdown_tasks();
 
         unsafe { ShutdownSteamvr() };
     });
-}
-
-pub fn notify_restart_driver() {
-    notify_shutdown_driver();
-
-    alvr_commands::restart_steamvr(&FILESYSTEM_LAYOUT.launcher_exe()).ok();
-}
-
-pub fn notify_application_update() {
-    notify_shutdown_driver();
-
-    alvr_commands::invoke_application_update(&FILESYSTEM_LAYOUT.launcher_exe()).ok();
 }
 
 fn init() {
@@ -466,7 +465,7 @@ pub unsafe extern "C" fn HmdDriverFactory(
     }
 
     extern "C" fn _shutdown_runtime() {
-        shutdown_runtimes();
+        shutdown_tasks();
     }
 
     unsafe extern "C" fn path_string_to_hash(path: *const c_char) -> u64 {

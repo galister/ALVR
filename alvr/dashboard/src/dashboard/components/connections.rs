@@ -1,11 +1,15 @@
-use crate::{dashboard::DashboardRequest, theme};
+use crate::{dashboard::DashboardRequest, steamvr_launcher::LAUNCHER, theme};
 use alvr_session::SessionDesc;
 use alvr_sockets::ClientListAction;
 use eframe::{
-    egui::{Frame, TextEdit, Ui, Window},
+    egui::{Frame, Layout, RichText, TextEdit, Ui, Window},
     emath::Align2,
+    epaint::Color32,
 };
-use std::net::{IpAddr, Ipv4Addr};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    thread,
+};
 
 struct EditPopupState {
     new_client: bool,
@@ -33,10 +37,24 @@ impl ConnectionsTab {
         let mut response = None;
 
         if !connected_to_server {
+            const MESSAGE: &str = "The server is not connected! Clients will not be discovered";
             Frame::group(ui.style())
                 .fill(theme::WARNING)
                 .show(ui, |ui| {
-                    ui.heading("The server is not connected! Clients will not be discovered")
+                    ui.horizontal(|ui| {
+                        ui.with_layout(Layout::right_to_left(eframe::emath::Align::Center), |ui| {
+                            if ui.button("Launch SteamVR").clicked() {
+                                thread::spawn(|| LAUNCHER.lock().launch_steamvr());
+                            }
+                            ui.with_layout(
+                                Layout::left_to_right(eframe::emath::Align::Center),
+                                |ui| {
+                                    ui.add_space(10.0);
+                                    ui.heading(RichText::new(MESSAGE).color(Color32::BLACK));
+                                },
+                            );
+                        });
+                    });
                 });
         }
 

@@ -9,11 +9,18 @@ use settings_schema::SchemaNode;
 use std::{
     collections::{HashMap, HashSet},
     net::IpAddr,
+    path::PathBuf,
 };
 
 // SessionSettings is similar to Settings but it contains every branch, even unused ones. This is
 // the settings representation that the UI uses.
 pub type SessionSettings = settings::SettingsDefault;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DriversBackup {
+    pub alvr_path: PathBuf,
+    pub other_paths: Vec<PathBuf>,
+}
 
 // This structure is used to store the minimum configuration data that ALVR driver needs to
 // initialize OpenVR before having the chance to communicate with a client. When a client is
@@ -117,8 +124,7 @@ pub struct ClientConnectionDesc {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SessionDesc {
     pub server_version: Version,
-    pub setup_wizard: bool,
-
+    pub drivers_backup: Option<DriversBackup>,
     pub openvr_config: OpenvrConfig,
     // The hashmap key is the hostname
     pub client_connections: HashMap<String, ClientConnectionDesc>,
@@ -129,7 +135,7 @@ impl Default for SessionDesc {
     fn default() -> Self {
         Self {
             server_version: ALVR_VERSION.clone(),
-            setup_wizard: alvr_common::is_stable() || alvr_common::is_nightly(),
+            drivers_backup: None,
             openvr_config: OpenvrConfig {
                 universe_id: 2,
                 headset_serial_number: "1WMGH000XX0000".into(),

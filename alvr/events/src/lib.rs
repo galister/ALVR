@@ -112,6 +112,7 @@ pub enum EventType {
     GraphStatistics(GraphStatistics),
     Button(ButtonEvent),
     Haptics(HapticsEvent),
+    ServerRequestsSelfRestart,
     ServerQuitting,
     Log(LogEvent),
 }

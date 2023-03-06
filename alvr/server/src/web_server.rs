@@ -70,6 +70,8 @@ async fn websocket<T: Clone + Send + 'static>(
                                     info!("Failed to send log with websocket: {e}");
                                     break;
                                 }
+
+                                ws.flush().await.ok();
                             }
                             Err(RecvError::Lagged(_)) => {
                                 warn!("Some log lines have been lost because the buffer is full");
@@ -137,7 +139,7 @@ async fn http_api(
                             return reply_json(&list);
                         }
                     }
-                    DashboardRequest::RestartSteamVR => crate::notify_restart_driver(),
+                    DashboardRequest::RestartSteamvr => crate::notify_restart_driver(),
                     DashboardRequest::Log(event) => {
                         let level = event.severity.into_log_level();
                         log::log!(level, "{}", event.content);
@@ -152,7 +154,7 @@ async fn http_api(
         }
         "/api/events" => {
             websocket(request, events_sender, |e| {
-                protocol::Message::Binary(bincode::serialize(&e).unwrap())
+                protocol::Message::Text(json::to_string(&e).unwrap())
             })
             .await?
         }

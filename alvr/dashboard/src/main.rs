@@ -2,43 +2,67 @@
 
 mod dashboard;
 mod data_sources;
-mod launcher;
+mod logging_backend;
+mod steamvr_launcher;
 mod theme;
 
-use alvr_sockets::{AudioDevicesList, DashboardRequest};
+use alvr_common::{parking_lot::Mutex, ALVR_VERSION};
+use alvr_sockets::DashboardRequest;
 use dashboard::Dashboard;
-use std::{sync::mpsc, thread};
-
-pub enum ServerEvent {
-    PingResponseConnected,
-    PingResponseDisconnected,
-    Event(alvr_events::Event),
-    AudioDevicesUpdated(AudioDevicesList),
-}
+use data_sources::ServerEvent;
+use eframe::{egui, IconData, NativeOptions};
+use ico::IconDir;
+use std::{
+    io::Cursor,
+    sync::{mpsc, Arc},
+    thread,
+};
 
 fn main() {
-    env_logger::init();
-    let native_options = eframe::NativeOptions::default();
+    logging_backend::init_logging();
 
-    let (dashboard_request_sender, dashboard_request_receiver) =
-        mpsc::channel::<DashboardRequest>();
-    let (server_event_sender, server_event_receiver) = mpsc::channel::<ServerEvent>();
+    let ico = IconDir::read(Cursor::new(include_bytes!("../resources/dashboard.ico"))).unwrap();
+    let image = ico.entries().first().unwrap().decode().unwrap();
 
-    let data_thread = thread::spawn(|| {
-        data_sources::data_interop_thread(dashboard_request_receiver, server_event_sender)
-    });
+    let data_thread = Arc::new(Mutex::new(None));
+
     eframe::run_native(
-        "ALVR Dashboard",
-        native_options,
-        Box::new(|creation_context| {
-            Box::new(Dashboard::new(
-                creation_context,
-                dashboard_request_sender,
-                server_event_receiver,
-            ))
-        }),
+        &format!("ALVR Dashboard (server v{})", *ALVR_VERSION),
+        NativeOptions {
+            icon_data: Some(IconData {
+                rgba: image.rgba_data().to_owned(),
+                width: image.width(),
+                height: image.height(),
+            }),
+            initial_window_size: Some(egui::vec2(1000.0, 600.0)),
+            centered: true,
+            ..Default::default()
+        },
+        {
+            let data_thread = Arc::clone(&data_thread);
+            Box::new(move |creation_context| {
+                let (dashboard_requests_sender, dashboard_requests_receiver) =
+                    mpsc::channel::<DashboardRequest>();
+                let (server_events_sender, server_events_receiver) = mpsc::channel::<ServerEvent>();
+
+                let context = creation_context.egui_ctx.clone();
+                *data_thread.lock() = Some(thread::spawn(|| {
+                    data_sources::data_interop_thread(
+                        context,
+                        dashboard_requests_receiver,
+                        server_events_sender,
+                    )
+                }));
+
+                Box::new(Dashboard::new(
+                    creation_context,
+                    dashboard_requests_sender,
+                    server_events_receiver,
+                ))
+            })
+        },
     )
     .unwrap();
 
-    data_thread.join().unwrap();
+    data_thread.lock().take().unwrap().join().unwrap();
 }

@@ -4,18 +4,27 @@ mod components;
 use self::components::{
     AboutTab, ConnectionsTab, InstallationTab, LogsTab, SettingsTab, SetupWizard,
 };
-use crate::{dashboard::components::StatisticsTab, launcher, theme, ServerEvent};
+use crate::{
+    dashboard::components::StatisticsTab,
+    steamvr_launcher::{self, LAUNCHER},
+    theme, ServerEvent,
+};
+use alvr_common::{prelude::*, RelaxedAtomic};
 use alvr_events::{Event, EventSeverity, EventType, LogEvent};
 use alvr_session::{ClientConnectionDesc, LogLevel, SessionDesc};
 use alvr_sockets::{ClientListAction, DashboardRequest};
-use eframe::egui::{
-    self, style::Margin, Align, CentralPanel, Context, Frame, Label, Layout, RichText, ScrollArea,
-    SidePanel, Stroke, TopBottomPanel,
+use eframe::{
+    egui::{
+        self, style::Margin, Align, CentralPanel, Context, Frame, Label, Layout, RichText,
+        ScrollArea, SidePanel, Stroke, TopBottomPanel, Window,
+    },
+    epaint::Color32,
 };
 use std::{
     collections::BTreeMap,
     ops::Deref,
     sync::{atomic::AtomicUsize, mpsc, Arc},
+    thread,
 };
 
 const NOTIFICATION_BAR_HEIGHT: f32 = 30.0;
@@ -58,6 +67,7 @@ enum Tab {
 
 pub struct Dashboard {
     connected_to_server: bool,
+    server_restarting: Arc<RelaxedAtomic>,
     selected_tab: Tab,
     tab_labels: BTreeMap<Tab, &'static str>,
     connections_tab: ConnectionsTab,
@@ -91,6 +101,7 @@ impl Dashboard {
 
         Self {
             connected_to_server: false,
+            server_restarting: Arc::new(RelaxedAtomic::new(false)),
             selected_tab: Tab::Connections,
             tab_labels: [
                 (Tab::Connections, "🔌  Connections"),
@@ -119,7 +130,7 @@ impl Dashboard {
 }
 
 impl eframe::App for Dashboard {
-    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, context: &egui::Context, _: &mut eframe::Frame) {
         for event in self.server_events_receiver.try_iter() {
             match event {
                 ServerEvent::Event(event) => {
@@ -133,6 +144,18 @@ impl eframe::App for Dashboard {
                         EventType::Session(session) => {
                             self.session = *session.clone();
                             self.settings_tab.update_session(&session.session_settings);
+                        }
+                        EventType::ServerRequestsSelfRestart => {
+                            if !self.server_restarting.value() {
+                                self.server_restarting.set(true);
+
+                                let server_restarting = Arc::clone(&self.server_restarting);
+                                thread::spawn(move || {
+                                    LAUNCHER.lock().restart_steamvr();
+
+                                    server_restarting.set(false);
+                                });
+                            }
                         }
                         _ => {
                             self.logs_tab.update_logs(event.clone());
@@ -171,68 +194,81 @@ impl eframe::App for Dashboard {
                 ServerEvent::AudioDevicesUpdated(list) => {
                     self.settings_tab.update_audio_devices(list);
                 }
+                _ => (),
             }
+        }
+
+        if self.server_restarting.value() {
+            CentralPanel::default().show(context, |ui| {
+                // todo: find a way to center both vertically and horizontally
+                ui.vertical_centered(|ui| {
+                    ui.add_space(100.0);
+                    ui.heading(RichText::new("StreamVR is restarting").size(30.0));
+                });
+            });
+
+            return;
         }
 
         let mut requests = vec![];
 
         match &mut self.setup_wizard {
             Some(setup_wizard) => {
-                CentralPanel::default().show(ctx, |ui| {
+                CentralPanel::default().show(context, |ui| {
                     if let Some(request) = setup_wizard.ui(ui) {
                         requests.push(request);
                     }
                 });
             }
             None => {
-                if match &self.notification {
-                    Some(log) => {
-                        let (fg, bg) = match log.severity {
-                            EventSeverity::Debug => (theme::FG, theme::DEBUG),
-                            EventSeverity::Info => (theme::BG, theme::INFO),
-                            EventSeverity::Warning => (theme::BG, theme::WARNING),
-                            EventSeverity::Error => (theme::FG, theme::ERROR),
-                        };
-                        TopBottomPanel::bottom("bottom_panel")
-                            .default_height(NOTIFICATION_BAR_HEIGHT)
-                            .min_height(NOTIFICATION_BAR_HEIGHT)
-                            .frame(
-                                Frame::default()
-                                    .inner_margin(Margin::same(5.0))
-                                    .fill(bg)
-                                    .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
-                            )
-                            .show(ctx, |ui| {
-                                ui.horizontal(|ui| {
-                                    ui.add(
-                                        Label::new(RichText::new(&log.content).color(fg))
-                                            .wrap(true),
-                                    );
-                                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                        ui.button("❌").clicked()
-                                    })
-                                    .inner
-                                })
-                                .inner
-                            })
-                            .inner
-                    }
-                    None => {
-                        TopBottomPanel::bottom("bottom_panel")
-                            .default_height(NOTIFICATION_BAR_HEIGHT)
-                            .min_height(NOTIFICATION_BAR_HEIGHT)
-                            .frame(
-                                Frame::default()
-                                    .inner_margin(Margin::same(5.0))
-                                    .fill(theme::LIGHTER_BG)
-                                    .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
-                            )
-                            .show(ctx, |ui| ui.label("No new notifications"));
-                        false
-                    }
-                } {
-                    self.notification = None;
-                }
+                // if match &self.notification {
+                //     Some(log) => {
+                //         let (fg, bg) = match log.severity {
+                //             EventSeverity::Debug => (theme::FG, theme::DEBUG),
+                //             EventSeverity::Info => (theme::BG, theme::INFO),
+                //             EventSeverity::Warning => (theme::BG, theme::WARNING),
+                //             EventSeverity::Error => (theme::FG, theme::ERROR),
+                //         };
+                //         TopBottomPanel::bottom("bottom_panel")
+                //             .default_height(NOTIFICATION_BAR_HEIGHT)
+                //             .min_height(NOTIFICATION_BAR_HEIGHT)
+                //             .frame(
+                //                 Frame::default()
+                //                     .inner_margin(Margin::same(5.0))
+                //                     .fill(bg)
+                //                     .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
+                //             )
+                //             .show(ctx, |ui| {
+                //                 ui.horizontal(|ui| {
+                //                     ui.add(
+                //                         Label::new(RichText::new(&log.content).color(fg))
+                //                             .wrap(true),
+                //                     );
+                //                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                //                         ui.button("❌").clicked()
+                //                     })
+                //                     .inner
+                //                 })
+                //                 .inner
+                //             })
+                //             .inner
+                //     }
+                //     None => {
+                //         TopBottomPanel::bottom("bottom_panel")
+                //             .default_height(NOTIFICATION_BAR_HEIGHT)
+                //             .min_height(NOTIFICATION_BAR_HEIGHT)
+                //             .frame(
+                //                 Frame::default()
+                //                     .inner_margin(Margin::same(5.0))
+                //                     .fill(theme::LIGHTER_BG)
+                //                     .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
+                //             )
+                //             .show(ctx, |ui| ui.label("No new notifications"));
+                //         false
+                //     }
+                // } {
+                //     self.notification = None;
+                // }
 
                 SidePanel::left("side_panel")
                     .resizable(false)
@@ -242,8 +278,8 @@ impl eframe::App for Dashboard {
                             .inner_margin(Margin::same(7.0))
                             .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
                     )
-                    .exact_width(120.0)
-                    .show(ctx, |ui| {
+                    .exact_width(150.0)
+                    .show(context, |ui| {
                         ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
                             ui.add_space(13.0);
                             ui.heading(RichText::new("ALVR").size(25.0).strong());
@@ -257,12 +293,27 @@ impl eframe::App for Dashboard {
                         });
 
                         ui.with_layout(
-                            Layout::bottom_up(Align::Min).with_cross_justify(true),
+                            Layout::bottom_up(Align::Center).with_cross_justify(true),
                             |ui| {
                                 ui.add_space(5.0);
-                                if ui.button("Restart SteamVR").clicked() {
-                                    requests.push(DashboardRequest::RestartSteamVR);
+                                if self.connected_to_server {
+                                    if ui.button("Restart SteamVR").clicked() {
+                                        requests.push(DashboardRequest::RestartSteamvr);
+                                    }
+                                } else if ui.button("Launch SteamVR").clicked() {
+                                    thread::spawn(|| LAUNCHER.lock().launch_steamvr());
                                 }
+
+                                ui.horizontal(|ui| {
+                                    ui.add_space(5.0);
+                                    ui.label("Streamer:");
+                                    ui.add_space(-10.0);
+                                    if self.connected_to_server {
+                                        ui.label(RichText::new("Connected").color(Color32::GREEN));
+                                    } else {
+                                        ui.label(RichText::new("Disconnected").color(Color32::RED));
+                                    }
+                                })
                             },
                         )
                     });
@@ -273,7 +324,7 @@ impl eframe::App for Dashboard {
                             .inner_margin(Margin::same(20.0))
                             .fill(theme::BG),
                     )
-                    .show(ctx, |ui| {
+                    .show(context, |ui| {
                         ui.with_layout(Layout::top_down_justified(Align::LEFT), |ui| {
                             ui.heading(
                                 RichText::new(*self.tab_labels.get(&self.selected_tab).unwrap())

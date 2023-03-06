@@ -19,12 +19,12 @@ pub const ERROR: Color32 = Color32::from_rgb(192, 28, 40);
 pub mod graph_colors {
     use eframe::egui::Color32;
 
-    pub const RENDER: Color32 = super::ERROR;
-    pub const NETWORK: Color32 = Color32::from_rgb(94, 92, 100);
-    pub const TRANSCODE: Color32 = super::ACCENT;
-    pub const IDLE: Color32 = super::WARNING;
-    pub const SERVER_FPS: Color32 = Color32::from_rgb(145, 65, 172);
-    pub const CLIENT_FPS: Color32 = Color32::from_rgb(255, 120, 0);
+    pub const RENDER: Color32 = Color32::RED;
+    pub const NETWORK: Color32 = Color32::GRAY;
+    pub const TRANSCODE: Color32 = Color32::LIGHT_BLUE;
+    pub const IDLE: Color32 = Color32::YELLOW;
+    pub const SERVER_FPS: Color32 = Color32::LIGHT_BLUE;
+    pub const CLIENT_FPS: Color32 = Color32::KHAKI;
 }
 
 pub fn set_theme(ctx: &Context) {

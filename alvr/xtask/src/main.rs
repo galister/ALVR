@@ -53,9 +53,9 @@ ARGS:
 pub fn run_server() {
     let sh = Shell::new().unwrap();
 
-    let launcher_exe = Layout::new(&afs::server_build_dir()).launcher_exe();
+    let dashboard_exe = Layout::new(&afs::server_build_dir()).dashboard_exe();
 
-    cmd!(sh, "{launcher_exe}").run().unwrap();
+    cmd!(sh, "{dashboard_exe}").run().unwrap();
 }
 
 pub fn clean() {

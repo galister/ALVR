@@ -29,6 +29,7 @@ sysinfo = { version = "0.28", default-features = false }
 tungstenite = "0.18"
 ureq = { version = "2", features = ["json"] }
 url = "2"
+ico = "0.3"
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
