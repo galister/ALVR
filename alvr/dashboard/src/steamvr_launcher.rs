@@ -1,9 +1,5 @@
 use crate::data_sources;
-use alvr_common::{
-    once_cell::sync::Lazy,
-    parking_lot::Mutex,
-    prelude::{debug, error},
-};
+use alvr_common::{once_cell::sync::Lazy, parking_lot::Mutex, prelude::*};
 use alvr_filesystem as afs;
 use alvr_session::{DriverLaunchAction, DriversBackup};
 use std::{

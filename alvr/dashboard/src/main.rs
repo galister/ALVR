@@ -2,6 +2,7 @@
 
 mod dashboard;
 mod data_sources;
+mod firewall;
 mod logging_backend;
 mod steamvr_launcher;
 mod theme;

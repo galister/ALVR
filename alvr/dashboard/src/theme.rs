@@ -20,7 +20,8 @@ pub mod graph_colors {
     use eframe::egui::Color32;
 
     pub const RENDER: Color32 = Color32::RED;
-    pub const NETWORK: Color32 = Color32::GRAY;
+    pub const RENDER_VARIANT: Color32 = Color32::from_rgb(255, 50, 0);
+    pub const NETWORK: Color32 = Color32::DARK_GRAY;
     pub const TRANSCODE: Color32 = Color32::LIGHT_BLUE;
     pub const IDLE: Color32 = Color32::YELLOW;
     pub const SERVER_FPS: Color32 = Color32::LIGHT_BLUE;

@@ -1,9 +1,7 @@
 mod basic_components;
 mod components;
 
-use self::components::{
-    AboutTab, ConnectionsTab, InstallationTab, LogsTab, SettingsTab, SetupWizard,
-};
+use self::components::{ConnectionsTab, InstallationTab, LogsTab, SettingsTab, SetupWizard};
 use crate::{
     dashboard::components::StatisticsTab,
     steamvr_launcher::{self, LAUNCHER},
@@ -75,11 +73,9 @@ pub struct Dashboard {
     settings_tab: SettingsTab,
     installation_tab: InstallationTab,
     logs_tab: LogsTab,
-    about_tab: AboutTab,
     notification: Option<LogEvent>,
     setup_wizard: Option<SetupWizard>,
     session: SessionDesc,
-    // drivers: Vec<String>,
     dashboard_requests_sender: mpsc::Sender<DashboardRequest>,
     server_events_receiver: mpsc::Receiver<ServerEvent>,
 }
@@ -118,11 +114,9 @@ impl Dashboard {
             settings_tab: SettingsTab::new(),
             installation_tab: InstallationTab::new(),
             logs_tab: LogsTab::new(),
-            about_tab: AboutTab::new(),
             notification: None,
             setup_wizard: None,
             session: SessionDesc::default(),
-            // drivers,
             dashboard_requests_sender,
             server_events_receiver,
         }
@@ -187,9 +181,11 @@ impl eframe::App for Dashboard {
                 // }
                 ServerEvent::PingResponseConnected => {
                     self.connected_to_server = true;
+                    self.installation_tab.update_drivers();
                 }
                 ServerEvent::PingResponseDisconnected => {
                     self.connected_to_server = false;
+                    self.installation_tab.update_drivers();
                 }
                 ServerEvent::AudioDevicesUpdated(list) => {
                     self.settings_tab.update_audio_devices(list);
@@ -348,21 +344,13 @@ impl eframe::App for Dashboard {
                                 Tab::Settings => {
                                     requests.extend(self.settings_tab.ui(ui));
                                 }
-                                Tab::Installation => {
-                                    if let Some(request) = self.installation_tab.ui(ui, &vec![]) {
-                                        requests.push(request);
-                                    }
-                                }
+                                Tab::Installation => self.installation_tab.ui(ui),
                                 Tab::Logs => {
                                     if let Some(request) = self.logs_tab.ui(ui) {
                                         requests.push(request);
                                     }
                                 }
-                                Tab::About => {
-                                    if let Some(request) = self.about_tab.ui(ui, &self.session) {
-                                        requests.push(request);
-                                    }
-                                }
+                                Tab::About => components::about_tab_ui(ui),
                             })
                         })
                     });
