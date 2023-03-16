@@ -128,6 +128,8 @@ impl eframe::App for Dashboard {
         for event in self.server_events_receiver.try_iter() {
             match event {
                 ServerEvent::Event(event) => {
+                    self.logs_tab.push_event(event.clone());
+
                     match event.event_type {
                         EventType::GraphStatistics(graph_statistics) => self
                             .statistics_tab
@@ -152,7 +154,6 @@ impl eframe::App for Dashboard {
                             }
                         }
                         _ => {
-                            self.logs_tab.update_logs(event.clone());
                             // Create a notification based on the notification level in the settings
                             // match self.session.to_settings().extra.notification_level {
                             //     LogLevel::Debug => self.notification = Some(log.to_owned()),
@@ -345,11 +346,7 @@ impl eframe::App for Dashboard {
                                     requests.extend(self.settings_tab.ui(ui));
                                 }
                                 Tab::Installation => self.installation_tab.ui(ui),
-                                Tab::Logs => {
-                                    if let Some(request) = self.logs_tab.ui(ui) {
-                                        requests.push(request);
-                                    }
-                                }
+                                Tab::Logs => self.logs_tab.ui(ui),
                                 Tab::About => components::about_tab_ui(ui),
                             })
                         })

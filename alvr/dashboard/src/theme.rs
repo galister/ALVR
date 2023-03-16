@@ -9,11 +9,21 @@ pub const SEPARATOR_BG: Color32 = Color32::from_rgb(69, 69, 69);
 pub const SELECTED: Color32 = Color32::from_rgb(120, 174, 237);
 pub const FG: Color32 = Color32::from_rgb(250, 250, 250);
 
-// Colors for the notifications
-pub const DEBUG: Color32 = BG;
-pub const INFO: Color32 = Color32::from_rgb(38, 162, 105);
-pub const WARNING: Color32 = Color32::from_rgb(205, 147, 9);
-pub const ERROR: Color32 = Color32::from_rgb(192, 28, 40);
+pub mod log_colors {
+    use super::{FG, LIGHTER_BG};
+    use eframe::epaint::Color32;
+
+    pub const ERROR_FG: Color32 = Color32::from_rgb(192, 28, 40);
+    pub const WARNING_FG: Color32 = Color32::from_rgb(205, 147, 9);
+    pub const INFO_FG: Color32 = Color32::from_rgb(38, 162, 105);
+    pub const DEBUG_FG: Color32 = FG;
+    pub const EVENT_FG: Color32 = Color32::GRAY;
+
+    pub const ERROR_BG: Color32 = Color32::from_rgb(192, 28, 40);
+    pub const WARNING_BG: Color32 = Color32::from_rgb(205, 147, 9);
+    pub const INFO_BG: Color32 = Color32::from_rgb(38, 162, 105);
+    pub const DEBUG_BG: Color32 = LIGHTER_BG;
+}
 
 // Graph colors
 pub mod graph_colors {

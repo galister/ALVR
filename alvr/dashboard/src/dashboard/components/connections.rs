@@ -1,4 +1,8 @@
-use crate::{dashboard::DashboardRequest, steamvr_launcher::LAUNCHER, theme};
+use crate::{
+    dashboard::DashboardRequest,
+    steamvr_launcher::LAUNCHER,
+    theme::{self, log_colors},
+};
 use alvr_session::SessionDesc;
 use alvr_sockets::ClientListAction;
 use eframe::{
@@ -38,7 +42,7 @@ impl ConnectionsTab {
 
         if !connected_to_server {
             Frame::group(ui.style())
-                .fill(theme::WARNING)
+                .fill(log_colors::WARNING_BG)
                 .show(ui, |ui| {
                     Grid::new(0).num_columns(2).show(ui, |ui| {
                         ui.horizontal(|ui| {
@@ -103,14 +107,23 @@ impl ConnectionsTab {
                         ui.heading("Trusted clients");
                     });
 
-                    Grid::new(1).num_columns(2).show(ui, |ui| {
+                    Grid::new(2).num_columns(2).show(ui, |ui| {
                         for (hostname, data) in trusted_clients {
                             ui.horizontal(|ui| {
+                                ui.add_space(10.0);
                                 ui.label(format!(
                                     "{hostname}: {} ({})",
                                     data.current_ip.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
                                     data.display_name
                                 ));
+                            });
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                if ui.button("Remove").clicked() {
+                                    response = Some(DashboardRequest::UpdateClientList {
+                                        hostname: hostname.clone(),
+                                        action: ClientListAction::RemoveEntry,
+                                    });
+                                }
                                 if ui.button("Edit").clicked() {
                                     self.edit_popup_state = Some(EditPopupState {
                                         new_client: false,
@@ -120,12 +133,6 @@ impl ConnectionsTab {
                                             .iter()
                                             .map(|addr| addr.to_string())
                                             .collect::<Vec<String>>(),
-                                    });
-                                }
-                                if ui.button("Remove").clicked() {
-                                    response = Some(DashboardRequest::UpdateClientList {
-                                        hostname: hostname.clone(),
-                                        action: ClientListAction::RemoveEntry,
                                     });
                                 }
                             });
