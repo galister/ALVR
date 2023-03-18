@@ -1,9 +1,9 @@
 use super::{NestingInfo, SettingControl, INDENTATION_STEP};
 use crate::dashboard::DisplayString;
+use alvr_session::settings_schema::{SchemaEntry, SchemaNode};
 use alvr_sockets::DashboardRequest;
 use eframe::egui::Ui;
 use serde_json as json;
-use settings_schema::{NamedEntry, SchemaNode};
 use std::collections::HashMap;
 
 fn get_display_name(id: &str, strings: &HashMap<String, String>) -> String {
@@ -27,7 +27,10 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn new(mut nesting_info: NestingInfo, schema_entries: Vec<NamedEntry<SchemaNode>>) -> Self {
+    pub fn new(
+        mut nesting_info: NestingInfo,
+        schema_entries: Vec<SchemaEntry<SchemaNode>>,
+    ) -> Self {
         if nesting_info.path.len() > 1 {
             nesting_info.indentation_level += 1;
         }

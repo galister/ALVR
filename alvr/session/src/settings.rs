@@ -5,12 +5,13 @@ use settings_schema::{DictionaryDefault, SettingsSchema, Switch, SwitchDefault};
 include!(concat!(env!("OUT_DIR"), "/openvr_property_keys.rs"));
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
+#[schema(gui = "button_group")]
 pub enum FrameSize {
-    Scale(#[schema(min = 0.25, max = 2., step = 0.01)] f32),
+    Scale(#[schema(gui(slider(min = 0.25, max = 2.0, step = 0.01)))] f32),
     Absolute {
-        #[schema(min = 32, step = 32)]
+        #[schema(gui(slider(min = 32, max = 0x2000, step = 32)))]
         width: u32,
-        #[schema(min = 32, step = 32)]
+        #[schema(gui(slider(min = 32, max = 0x2000, step = 32)))]
         height: u32,
     },
 }
@@ -51,6 +52,7 @@ pub enum NvencAdaptiveQuantizationMode {
 
 #[repr(u8)]
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
+#[schema(gui = "button_group")]
 pub enum RateControlMode {
     #[schema(strings(display_name = "CBR"))]
     Cbr = 0,
@@ -60,6 +62,7 @@ pub enum RateControlMode {
 
 #[repr(u8)]
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
+#[schema(gui = "button_group")]
 pub enum EntropyCoding {
     #[schema(strings(display_name = "CABAC"))]
     Cabac = 0,
@@ -93,9 +96,9 @@ pub struct NvencOverrides {
 pub struct AmfControls {
     pub enable_vbaq: bool,
     pub use_preproc: bool,
-    #[schema(min = 0, max = 10)]
+    #[schema(gui(slider(min = 0, max = 10)))]
     pub preproc_sigma: u32,
-    #[schema(min = 0, max = 10)]
+    #[schema(gui(slider(min = 0, max = 10)))]
     pub preproc_tor: u32,
 }
 
@@ -117,16 +120,17 @@ pub struct AdvancedCodecOptions {
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
+#[schema(gui = "button_group")]
 pub enum BitrateMode {
-    ConstantMbps(#[schema(min = 1, max = 1000)] u64),
+    ConstantMbps(#[schema(gui(slider(min = 1, max = 1000)))] u64),
     Adaptive {
-        #[schema(min = 0.5, max = 2.0, step = 0.05)]
+        #[schema(gui(slider(min = 0.5, max = 2.0, step = 0.05)))]
         saturation_multiplier: f32,
 
-        #[schema(min = 1, max = 1000, step = 1)]
+        #[schema(gui(slider(min = 1, max = 1000)))]
         max_bitrate_mbps: Switch<u64>,
 
-        #[schema(min = 1, max = 1000, step = 1)]
+        #[schema(gui(slider(min = 1, max = 1000)))]
         min_bitrate_mbps: Switch<u64>,
     },
 }
@@ -135,19 +139,19 @@ pub enum BitrateMode {
 pub struct BitrateConfig {
     pub mode: BitrateMode,
 
-    #[schema(min = 0.01, max = 2.0, step = 0.01)]
+    #[schema(gui(slider(min = 0.01, max = 2.0, step = 0.01)))]
     pub framerate_reset_threshold_multiplier: f32,
 
-    #[schema(min = 1, max = 50, step = 1)]
+    #[schema(gui(slider(min = 1, max = 50)))]
     pub max_network_latency_ms: Switch<u64>,
 
-    #[schema(min = 1, max = 50)]
+    #[schema(gui(slider(min = 1, max = 50)))]
     pub max_decoder_latency_ms: u64,
 
-    #[schema(min = 1, max = 100)]
+    #[schema(gui(slider(min = 1, max = 100)))]
     pub decoder_latency_overstep_frames: u64,
 
-    #[schema(min = 0.5, max = 1.0)]
+    #[schema(gui(slider(min = 0.5, max = 1.0)))]
     pub decoder_latency_overstep_multiplier: f32,
 }
 
@@ -165,39 +169,37 @@ pub enum OculusFovetionLevel {
 pub struct FoveatedRenderingDesc {
     #[schema(
         strings(display_name = "Center region width"),
-        min = 0.,
-        max = 1.,
-        step = 0.01
+        gui(slider(min = 0.0, max = 1.0, step = 0.01))
     )]
     pub center_size_x: f32,
 
     #[schema(
         strings(display_name = "Center region height"),
-        min = 0.,
-        max = 1.,
-        step = 0.01
+        gui(slider(min = 0.0, max = 1.0, step = 0.01))
     )]
     pub center_size_y: f32,
 
-    #[schema(strings(display_name = "Center shift X"), min = -1., max = 1., step = 0.01)]
+    #[schema(
+        strings(display_name = "Center shift X"),
+        gui(slider(min = -1.0, max = 1.0, step = 0.01))
+    )]
     pub center_shift_x: f32,
 
-    #[schema(strings(display_name = "Center shift Y"), min = -1., max = 1., step = 0.01)]
+    #[schema(
+        strings(display_name = "Center shift Y"),
+        gui(slider(min = -1.0, max = 1.0, step = 0.01))
+    )]
     pub center_shift_y: f32,
 
     #[schema(
         strings(display_name = "Horizontal edge ratio"),
-        min = 1.,
-        max = 10.,
-        step = 1.
+        gui(slider(min = 1.0, max = 10.0, step = 1.0))
     )]
     pub edge_ratio_x: f32,
 
     #[schema(
         strings(display_name = "Vertical edge ratio"),
-        min = 1.,
-        max = 10.,
-        step = 1.
+        gui(slider(min = 1.0, max = 10.0, step = 1.0))
     )]
     pub edge_ratio_y: f32,
 }
@@ -205,24 +207,25 @@ pub struct FoveatedRenderingDesc {
 #[repr(C)]
 #[derive(SettingsSchema, Clone, Copy, Serialize, Deserialize, Pod, Zeroable)]
 pub struct ColorCorrectionDesc {
-    #[schema(min = -1., max = 1., step = 0.01)]
+    #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
     pub brightness: f32,
 
-    #[schema(min = -1., max = 1., step = 0.01)]
+    #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
     pub contrast: f32,
 
-    #[schema(min = -1., max = 1., step = 0.01)]
+    #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
     pub saturation: f32,
 
-    #[schema(min = 0., max = 5., step = 0.01)]
+    #[schema(gui(slider(min = 0.0, max = 5.0, step = 0.01)))]
     pub gamma: f32,
 
-    #[schema(min = -1., max = 5., step = 0.01)]
+    #[schema(gui(slider(min = -1.0, max = 5.0, step = 0.01)))]
     pub sharpening: f32,
 }
 
 #[repr(u8)]
 #[derive(SettingsSchema, Serialize, Deserialize, Debug, Copy, Clone)]
+#[schema(gui = "button_group")]
 pub enum CodecType {
     #[schema(strings(display_name = "h264"))]
     H264,
@@ -238,18 +241,19 @@ pub struct VideoDesc {
 
     pub recommended_target_resolution: FrameSize,
 
-    #[schema(strings(display_name = "Preferred FPS"), min = 0.0)]
+    #[schema(
+        strings(display_name = "Preferred FPS"),
+        gui(slider(min = 60.0, max = 120.0))
+    )]
     pub preferred_fps: f32,
 
     #[schema(
         strings(display_name = "Maximum buffering (frames)"),
-        min = 1.,
-        max = 10.0,
-        step = 0.1
+        gui(slider(min = 1.0, max = 10.0, step = 0.1))
     )]
     pub max_buffering_frames: f32,
 
-    #[schema(min = 0.50, max = 0.99, step = 0.01)]
+    #[schema(gui(slider(min = 0.50, max = 0.99, step = 0.01)))]
     pub buffering_history_weight: f32,
 
     pub codec: CodecType,
@@ -285,15 +289,18 @@ pub struct VideoDesc {
 pub enum AudioDeviceId {
     Default,
     Name(String),
-    Index(#[schema(min = 1, gui = "up_down")] u64),
+    Index(u64),
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct AudioBufferingConfig {
-    #[schema(strings(display_name = "Average buffering (ms)"), min = 0, max = 200)]
+    #[schema(
+        strings(display_name = "Average buffering (ms)"),
+        gui(slider(min = 0, max = 200))
+    )]
     pub average_buffering_ms: u64,
 
-    #[schema(strings(display_name = "Batch (ms)"), min = 1, max = 20)]
+    #[schema(strings(display_name = "Batch (ms)"), gui(slider(min = 1, max = 20)))]
     pub batch_ms: u64,
 }
 
@@ -318,6 +325,7 @@ pub struct MicrophoneDesc {
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone, Copy)]
+#[schema(gui = "button_group")]
 pub enum LinuxAudioBackend {
     #[schema(strings(display_name = "ALSA"))]
     Alsa,
@@ -347,31 +355,31 @@ pub enum OpenvrPropValue {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct ControllersTriggerOverrideDesc {
-    #[schema(min = 0.01, max = 1., step = 0.01)]
+    #[schema(gui(slider(min = 0.01, max = 1.0, step = 0.01)))]
     pub trigger_threshold: f32,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct ControllersGripOverrideDesc {
-    #[schema(min = 0.01, max = 1., step = 0.01)]
+    #[schema(gui(slider(min = 0.01, max = 1.0, step = 0.01)))]
     pub grip_threshold: f32,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct HapticsConfig {
-    #[schema(min = 0., max = 5., step = 0.1)]
+    #[schema(gui(slider(min = 0.0, max = 5.0, step = 0.1)))]
     pub intensity_multiplier: f32,
 
-    #[schema(min = 0., max = 1., step = 0.01)]
+    #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.01)))]
     pub amplitude_curve: f32,
 
-    #[schema(min = 0., max = 0.1, step = 0.001)]
+    #[schema(gui(slider(min = 0.0, max = 0.1, step = 0.001)))]
     pub min_duration_s: f32,
 
-    #[schema(min = 1., max = 5., step = 0.1)]
+    #[schema(gui(slider(min = 1.0, max = 5.0, step = 0.1)))]
     pub low_duration_amplitude_multiplier: f32,
 
-    #[schema(min = 0., max = 1., step = 0.01)]
+    #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.01)))]
     pub low_duration_range_multiplier: f32,
 }
 
@@ -399,13 +407,13 @@ pub struct ControllersDesc {
 
     pub input_profile_path: String,
 
-    #[schema(min = -50, max = 50, step = 1)]
+    #[schema(gui(slider(min = -100, max = 100)))]
     pub pose_time_offset_ms: i64,
 
-    #[schema(min = 0., max = 1.0, step = 0.001)]
+    #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.001)))]
     pub linear_velocity_cutoff: f32,
 
-    #[schema(min = 0., max = 100., step = 1.)]
+    #[schema(gui(slider(min = 0.0, max = 100.0, step = 1.0)))]
     pub angular_velocity_cutoff: f32,
 
     pub left_controller_position_offset: [f32; 3],
@@ -474,6 +482,7 @@ pub struct HeadsetDesc {
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
+#[schema(gui = "button_group")]
 pub enum SocketProtocol {
     Udp,
     Tcp,
@@ -501,7 +510,7 @@ pub struct DisconnectionCriteria {
 pub struct ConnectionDesc {
     pub client_discovery: Switch<DiscoveryConfig>,
 
-    #[schema(min = 1024, max = 0xFFFF)]
+    #[schema(gui(slider(min = 0x400, max = 0xFFFF)))]
     pub web_server_port: u16,
 
     pub stream_protocol: SocketProtocol,
@@ -522,8 +531,7 @@ pub struct ConnectionDesc {
 
     pub on_disconnect_script: String,
 
-    // Max packet size is 64KB for TCP and 65507 bytes for UDP
-    #[schema(min = 0, max = 0xFFFF)]
+    #[schema(gui(slider(min = 1024, max = 65507)))]
     pub packet_size: i32,
 
     pub statistics_history_size: u64,
@@ -544,6 +552,7 @@ pub enum LogLevel {
     Warning,
     Info,
     Debug,
+    RawEvents,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
@@ -565,7 +574,6 @@ pub struct ExtraDesc {
     pub driver_launch_action: DriverLaunchAction,
 
     pub notification_level: LogLevel,
-    pub exclude_notifications_without_id: bool,
 
     pub capture_frame_dir: String,
 
@@ -888,12 +896,11 @@ pub fn session_settings_default() -> SettingsDefault {
             },
             notification_level: LogLevelDefault {
                 variant: if cfg!(debug_assertions) {
-                    LogLevelDefaultVariant::Info
+                    LogLevelDefaultVariant::Debug
                 } else {
-                    LogLevelDefaultVariant::Warning
+                    LogLevelDefaultVariant::Info
                 },
             },
-            exclude_notifications_without_id: false,
             capture_frame_dir: if !cfg!(target_os = "linux") {
                 "/tmp".into()
             } else {

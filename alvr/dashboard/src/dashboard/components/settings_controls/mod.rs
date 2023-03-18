@@ -4,7 +4,7 @@ pub mod choice;
 pub mod dictionary;
 pub mod help;
 pub mod notice;
-pub mod numeric;
+pub mod number;
 pub mod optional;
 pub mod presets;
 pub mod reset;
@@ -13,10 +13,10 @@ pub mod switch;
 pub mod text;
 pub mod vector;
 
+use alvr_session::settings_schema::SchemaNode;
 use alvr_sockets::{DashboardRequest, PathSegment};
 use eframe::egui::Ui;
 use serde_json as json;
-use settings_schema::SchemaNode;
 
 const INDENTATION_STEP: f32 = 20.0;
 
@@ -57,7 +57,7 @@ pub enum SettingControl {
     Switch(switch::Control),
     Boolean(boolean::Control),
     Text(text::Control),
-    Numeric(numeric::Control),
+    Numeric(number::Control),
     None,
 }
 
@@ -87,34 +87,12 @@ impl SettingControl {
             SchemaNode::Boolean { default } => {
                 Self::Boolean(boolean::Control::new(nesting_info, default))
             }
-            SchemaNode::Integer {
+            SchemaNode::Number {
                 default,
-                min,
-                max,
-                step,
+                ty,
                 gui,
-            } => Self::Numeric(numeric::Control::new(
-                nesting_info,
-                default,
-                min,
-                max,
-                step,
-                gui,
-            )),
-            SchemaNode::Float {
-                default,
-                min,
-                max,
-                step,
-                gui,
-            } => Self::Numeric(numeric::Control::new(
-                nesting_info,
-                default,
-                min,
-                max,
-                step,
-                gui,
-            )),
+                suffix,
+            } => Self::Numeric(number::Control::new(nesting_info, default, ty, gui, suffix)),
             SchemaNode::Text { default } => Self::Text(text::Control::new(nesting_info, default)),
             // SchemaNode::Array(_) => todo!(),
             // SchemaNode::Vector { default_element, default } => todo!(),

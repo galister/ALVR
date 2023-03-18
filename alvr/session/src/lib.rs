@@ -1,11 +1,12 @@
 mod settings;
 
 pub use settings::*;
+pub use settings_schema;
 
 use alvr_common::{prelude::*, semver::Version, ALVR_VERSION};
 use serde::{Deserialize, Serialize};
 use serde_json as json;
-use settings_schema::SchemaNode;
+use settings_schema::{NumberType, SchemaNode};
 use std::{
     collections::{HashMap, HashSet},
     net::IpAddr,
@@ -366,17 +367,13 @@ fn extrapolate_session_settings_from_session_settings(
             }
         }
 
-        SchemaNode::Integer { .. } => {
-            if new_session_settings.is_i64() {
-                new_session_settings.clone()
-            } else {
-                old_session_settings.clone()
-            }
-        }
-
-        SchemaNode::Float { .. } => {
-            if new_session_settings.is_number() {
-                new_session_settings.clone()
+        SchemaNode::Number { ty, .. } => {
+            if let Some(value) = new_session_settings.as_f64() {
+                match ty {
+                    NumberType::UnsignedInteger => json::Value::from(value.abs() as u64),
+                    NumberType::SignedInteger => json::Value::from(value as i64),
+                    NumberType::Float => new_session_settings.clone(),
+                }
             } else {
                 old_session_settings.clone()
             }
@@ -521,10 +518,9 @@ fn json_session_settings_to_settings(
             }
         }
 
-        SchemaNode::Boolean { .. }
-        | SchemaNode::Integer { .. }
-        | SchemaNode::Float { .. }
-        | SchemaNode::Text { .. } => session_settings.clone(),
+        SchemaNode::Boolean { .. } | SchemaNode::Number { .. } | SchemaNode::Text { .. } => {
+            session_settings.clone()
+        }
 
         SchemaNode::Array(array_schema) => json::Value::Array(
             array_schema

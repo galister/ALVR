@@ -1,4 +1,4 @@
-use alvr_common::{parking_lot::Mutex, prelude::*, RelaxedAtomic, StrResult};
+use alvr_common::{parking_lot::Mutex, prelude::*, StrResult};
 use alvr_events::{Event, EventType};
 use alvr_server_data::ServerDataManager;
 use alvr_sockets::{AudioDevicesList, DashboardRequest, ServerResponse};

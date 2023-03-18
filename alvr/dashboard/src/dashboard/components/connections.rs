@@ -47,10 +47,11 @@ impl ConnectionsTab {
                     Grid::new(0).num_columns(2).show(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.add_space(10.0);
-                            ui.heading(
+                            ui.label(
                                 RichText::new(
                                     "The server is not connected! Clients will not be discovered",
                                 )
+                                .size(16.0)
                                 .color(Color32::BLACK),
                             );
                         });

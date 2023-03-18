@@ -1,7 +1,7 @@
 use super::{reset, NestingInfo};
 use alvr_sockets::DashboardRequest;
 use eframe::{
-    egui::{Layout, Ui},
+    egui::{Layout, TextEdit, Ui},
     emath::Align,
 };
 use serde_json as json;
@@ -50,15 +50,24 @@ impl Control {
         }
 
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-            if let Some(editing_value_mut) = &mut self.editing_value {
-                if ui.text_edit_singleline(editing_value_mut).lost_focus() {
+            let textbox = if let Some(editing_value_mut) = &mut self.editing_value {
+                TextEdit::singleline(editing_value_mut)
+            } else {
+                TextEdit::singleline(text_mut)
+            };
+
+            let response = ui.add(textbox.desired_width(250.));
+            if response.lost_focus() {
+                if let Some(editing_value_mut) = &mut self.editing_value {
                     request = get_request(&self.nesting_info, editing_value_mut);
                     *text_mut = editing_value_mut.clone();
-                    self.editing_value = None;
                 }
-            } else if ui.text_edit_singleline(text_mut).gained_focus() {
-                self.editing_value = Some(text_mut.clone());
+
+                self.editing_value = None;
             }
+            if response.gained_focus() {
+                self.editing_value = Some(text_mut.clone());
+            };
 
             if reset::reset_button(ui, *text_mut != self.default, &self.default_string).clicked() {
                 request = get_request(&self.nesting_info, &self.default);

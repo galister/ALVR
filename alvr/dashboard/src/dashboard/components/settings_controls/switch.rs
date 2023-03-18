@@ -1,12 +1,12 @@
 use super::{reset, NestingInfo, SettingControl};
 use crate::dashboard::basic_components;
+use alvr_session::settings_schema::SchemaNode;
 use alvr_sockets::DashboardRequest;
 use eframe::{
     egui::{Layout, Ui},
     emath::Align,
 };
 use serde_json as json;
-use settings_schema::SchemaNode;
 
 pub struct Control {
     nesting_info: NestingInfo,

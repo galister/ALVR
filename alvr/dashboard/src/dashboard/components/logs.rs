@@ -2,9 +2,9 @@ use std::collections::VecDeque;
 
 use crate::theme::log_colors;
 use alvr_events::{Event, EventSeverity, EventType};
+use alvr_session::{LogLevelDefaultVariant, SessionSettings};
 use eframe::{
-    egui::{Grid, Layout, ScrollArea, Ui},
-    emath::Align,
+    egui::{Grid, ScrollArea, Ui},
     epaint::Color32,
 };
 
@@ -30,8 +30,11 @@ impl LogsTab {
         }
     }
 
-    pub fn set_show_raw_events(&mut self, show: bool) {
-        self.show_raw_events = show;
+    pub fn update_session(&mut self, session_settings: &SessionSettings) {
+        self.show_raw_events = matches!(
+            session_settings.extra.notification_level.variant,
+            LogLevelDefaultVariant::RawEvents
+        );
     }
 
     pub fn push_event(&mut self, event: Event) {

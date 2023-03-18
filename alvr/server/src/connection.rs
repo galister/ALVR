@@ -14,7 +14,7 @@ use alvr_common::{
     RelaxedAtomic, DEVICE_ID_TO_PATH, LEFT_HAND_ID, RIGHT_HAND_ID,
 };
 use alvr_events::{ButtonEvent, ButtonValue, EventType, HapticsEvent};
-use alvr_session::{CodecType, FrameSize, OpenvrConfig};
+use alvr_session::{settings_schema::Switch, CodecType, FrameSize, OpenvrConfig};
 use alvr_sockets::{
     spawn_cancelable, ClientConnectionResult, ClientControlPacket, ClientListAction,
     ClientStatistics, ControlSocketReceiver, ControlSocketSender, PeerType, ProtoControlSocket,
@@ -22,7 +22,6 @@ use alvr_sockets::{
     KEEPALIVE_INTERVAL, STATISTICS, TRACKING, VIDEO,
 };
 use futures::future::BoxFuture;
-use settings_schema::Switch;
 use std::{
     collections::{HashMap, HashSet},
     future,

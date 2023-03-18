@@ -2,19 +2,15 @@ mod basic_components;
 mod components;
 
 use self::components::{ConnectionsTab, InstallationTab, LogsTab, SettingsTab, SetupWizard};
-use crate::{
-    dashboard::components::StatisticsTab,
-    steamvr_launcher::{self, LAUNCHER},
-    theme, ServerEvent,
-};
-use alvr_common::{prelude::*, RelaxedAtomic};
-use alvr_events::{Event, EventSeverity, EventType, LogEvent};
-use alvr_session::{ClientConnectionDesc, LogLevel, SessionDesc};
-use alvr_sockets::{ClientListAction, DashboardRequest};
+use crate::{dashboard::components::StatisticsTab, steamvr_launcher::LAUNCHER, theme, ServerEvent};
+use alvr_common::RelaxedAtomic;
+use alvr_events::{EventType, LogEvent};
+use alvr_session::SessionDesc;
+use alvr_sockets::DashboardRequest;
 use eframe::{
     egui::{
-        self, style::Margin, Align, CentralPanel, Context, Frame, Label, Layout, RichText,
-        ScrollArea, SidePanel, Stroke, TopBottomPanel, Window,
+        self, style::Margin, Align, CentralPanel, Frame, Layout, RichText, ScrollArea, SidePanel,
+        Stroke, TopBottomPanel,
     },
     epaint::Color32,
 };
@@ -140,6 +136,7 @@ impl eframe::App for Dashboard {
                         EventType::Session(session) => {
                             self.session = *session.clone();
                             self.settings_tab.update_session(&session.session_settings);
+                            self.logs_tab.update_session(&session.session_settings);
                         }
                         EventType::ServerRequestsSelfRestart => {
                             if !self.server_restarting.value() {

@@ -1,12 +1,12 @@
 use super::{reset, NestingInfo, SettingControl};
-use crate::dashboard::{basic_components, DisplayString};
+use crate::dashboard::{basic_components, get_id, DisplayString};
+use alvr_session::settings_schema::{ChoiceControlType, SchemaEntry, SchemaNode};
 use alvr_sockets::DashboardRequest;
 use eframe::{
-    egui::{Layout, Ui},
+    egui::{ComboBox, Layout, Ui},
     emath::Align,
 };
 use serde_json as json;
-use settings_schema::{ChoiceControlType, NamedEntry, SchemaNode};
 use std::collections::HashMap;
 
 fn get_display_name(id: &str, strings: &HashMap<String, String>) -> String {
@@ -33,15 +33,17 @@ pub struct Control {
     default_variant: String,
     default_string: String,
     variant_labels: Vec<DisplayString>,
+    variant_indices: HashMap<String, usize>,
     variant_controls: HashMap<String, SettingControl>,
     gui: ChoiceControlType,
+    combobox_id: usize,
 }
 
 impl Control {
     pub fn new(
         nesting_info: NestingInfo,
         default: String,
-        schema_variants: Vec<NamedEntry<Option<SchemaNode>>>,
+        schema_variants: Vec<SchemaEntry<Option<SchemaNode>>>,
         gui: Option<ChoiceControlType>,
     ) -> Self {
         let variant_labels = schema_variants
@@ -61,6 +63,12 @@ impl Control {
                 .unwrap()
                 .display
         );
+
+        let variant_indices = schema_variants
+            .iter()
+            .enumerate()
+            .map(|(idx, entry)| (entry.name.clone(), idx))
+            .collect();
 
         let variant_controls = schema_variants
             .into_iter()
@@ -83,8 +91,10 @@ impl Control {
             default_variant: default,
             default_string,
             variant_labels,
+            variant_indices,
             variant_controls,
-            gui: gui.unwrap_or(ChoiceControlType::ButtonGroup),
+            gui: gui.unwrap_or(ChoiceControlType::Dropdown),
+            combobox_id: get_id(),
         }
     }
 
@@ -116,8 +126,22 @@ impl Control {
 
         let mut request = None;
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-            if basic_components::button_group_clicked(ui, &self.variant_labels, variant_mut) {
-                request = get_request(&self.nesting_info, variant_mut);
+            if matches!(&self.gui, ChoiceControlType::ButtonGroup) {
+                if basic_components::button_group_clicked(ui, &self.variant_labels, variant_mut) {
+                    request = get_request(&self.nesting_info, variant_mut);
+                }
+            } else {
+                let mut index = self.variant_indices.get(variant_mut).cloned().unwrap();
+                let response = ComboBox::new(self.combobox_id, "").show_index(
+                    ui,
+                    &mut index,
+                    self.variant_labels.len(),
+                    |idx| self.variant_labels[idx].display.clone(),
+                );
+                if response.changed() {
+                    *variant_mut = self.variant_labels[index].id.clone();
+                    request = get_request(&self.nesting_info, variant_mut);
+                }
             }
 
             if reset::reset_button(
