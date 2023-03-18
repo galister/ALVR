@@ -58,6 +58,7 @@ pub enum SettingControl {
     Boolean(boolean::Control),
     Text(text::Control),
     Numeric(number::Control),
+    Array(array::Control),
     None,
 }
 
@@ -94,7 +95,9 @@ impl SettingControl {
                 suffix,
             } => Self::Numeric(number::Control::new(nesting_info, default, ty, gui, suffix)),
             SchemaNode::Text { default } => Self::Text(text::Control::new(nesting_info, default)),
-            // SchemaNode::Array(_) => todo!(),
+            SchemaNode::Array(schema_array) => {
+                Self::Array(array::Control::new(nesting_info, schema_array))
+            }
             // SchemaNode::Vector { default_element, default } => todo!(),
             // SchemaNode::Dictionary { default_key, default_value, default } => todo!(),
             _ => Self::None,
@@ -116,6 +119,7 @@ impl SettingControl {
             SettingControl::Boolean(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Text(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Numeric(control) => control.ui(ui, session_fragment, allow_inline),
+            SettingControl::Array(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::None => None,
         }
     }

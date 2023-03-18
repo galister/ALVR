@@ -7,6 +7,10 @@ use eframe::egui::{
     Shape, Stroke, Ui,
 };
 
+fn legend_label(ui: &mut Ui, text: &str, color: Color32) {
+    ui.label(RichText::new(text).size(10.0).color(color));
+}
+
 pub struct StatisticsTab {
     history: VecDeque<GraphStatistics>,
     last_statistics: Option<Statistics>,
@@ -36,23 +40,24 @@ impl StatisticsTab {
 
     pub fn ui(&mut self, ui: &mut Ui) -> Option<DashboardRequest> {
         ui.vertical(|ui| {
-            self.draw_latency_graph(ui);
-            self.draw_fps_graph(ui);
+            let avaibale_width = ui.available_width();
+            self.draw_latency_graph(ui, avaibale_width);
+            self.draw_fps_graph(ui, avaibale_width);
             self.draw_statistics_overview(ui);
         });
 
         None
     }
 
-    fn draw_latency_graph(&self, ui: &mut Ui) {
-        let mut from_screen = None;
+    fn draw_latency_graph(&self, ui: &mut Ui, available_width: f32) {
         ui.add_space(10.0);
         ui.label(RichText::new("Latency").size(20.0));
 
+        let mut from_screen = None;
         let canvas_response = Frame::canvas(ui.style())
             .show(ui, |ui| {
                 ui.ctx().request_repaint();
-                let size = ui.available_width() * vec2(1.0, 0.3);
+                let size = available_width * vec2(1.0, 0.2);
 
                 let (_id, rect) = ui.allocate_space(size);
 
@@ -177,26 +182,26 @@ impl StatisticsTab {
         }
 
         ui.horizontal(|ui| {
-            ui.colored_label(graph_colors::RENDER_VARIANT, "Game render");
-            ui.colored_label(graph_colors::RENDER, "Server compositor");
-            ui.colored_label(graph_colors::TRANSCODE, "Encode");
-            ui.colored_label(graph_colors::NETWORK, "Network");
-            ui.colored_label(graph_colors::TRANSCODE, "Decode");
-            ui.colored_label(graph_colors::IDLE, "Decoder queue");
-            ui.colored_label(graph_colors::RENDER, "Client compositor");
-            ui.colored_label(graph_colors::IDLE, "Client VSync");
+            legend_label(ui, "Game render", graph_colors::RENDER_VARIANT);
+            legend_label(ui, "Server compositor", graph_colors::RENDER);
+            legend_label(ui, "Encode", graph_colors::TRANSCODE);
+            legend_label(ui, "Network", graph_colors::NETWORK);
+            legend_label(ui, "Decode", graph_colors::TRANSCODE);
+            legend_label(ui, "Decoder queue", graph_colors::IDLE);
+            legend_label(ui, "Client compositor", graph_colors::RENDER);
+            legend_label(ui, "Client VSync", graph_colors::IDLE);
         });
     }
 
-    fn draw_fps_graph(&self, ui: &mut Ui) {
-        let mut from_screen = None;
-
+    fn draw_fps_graph(&self, ui: &mut Ui, available_width: f32) {
         ui.add_space(10.0);
         ui.label(RichText::new("FPS").size(20.0));
+
+        let mut from_screen = None;
         let canvas_response = Frame::canvas(ui.style())
             .show(ui, |ui| {
                 ui.ctx().request_repaint();
-                let size = ui.available_width() * vec2(1.0, 0.3);
+                let size = available_width * vec2(1.0, 0.2);
 
                 let (_id, rect) = ui.allocate_space(size);
 
@@ -234,9 +239,9 @@ impl StatisticsTab {
                     .map(|i| match self.history.get(i) {
                         Some(graph) => (
                             to_screen
-                                * pos2((self.max_history_length - i) as f32, graph.client_fps),
-                            to_screen
                                 * pos2((self.max_history_length - i) as f32, graph.server_fps),
+                            to_screen
+                                * pos2((self.max_history_length - i) as f32, graph.client_fps),
                         ),
                         None => (
                             to_screen * pos2((self.max_history_length - i) as f32, 0.0),
@@ -246,13 +251,14 @@ impl StatisticsTab {
                     .unzip();
 
                 ui.painter().add(Shape::line(
-                    client_fps_points,
-                    Stroke::new(1.0, graph_colors::CLIENT_FPS),
-                ));
-                ui.painter().add(Shape::line(
                     server_fps_points,
                     Stroke::new(1.0, graph_colors::SERVER_FPS),
                 ));
+                ui.painter().add(Shape::line(
+                    client_fps_points,
+                    Stroke::new(1.0, graph_colors::CLIENT_FPS),
+                ));
+
                 ui.painter().text(
                     to_screen * pos2(0.0, min as f32),
                     Align2::LEFT_BOTTOM,
@@ -280,19 +286,19 @@ impl StatisticsTab {
             {
                 popup::show_tooltip(ui.ctx(), Id::new("client_server_fps_popup"), |ui| {
                     ui.colored_label(
-                        graph_colors::CLIENT_FPS,
-                        format!("Client FPS: {:.2}", stats.client_fps),
-                    );
-                    ui.colored_label(
                         graph_colors::SERVER_FPS,
                         format!("Server FPS: {:.2}", stats.server_fps),
+                    );
+                    ui.colored_label(
+                        graph_colors::CLIENT_FPS,
+                        format!("Client FPS: {:.2}", stats.client_fps),
                     );
                 });
             }
         }
         ui.horizontal(|ui| {
-            ui.colored_label(graph_colors::CLIENT_FPS, "Client FPS");
-            ui.colored_label(graph_colors::SERVER_FPS, "Server FPS");
+            legend_label(ui, "Server FPS", graph_colors::SERVER_FPS);
+            legend_label(ui, "Client FPS", graph_colors::CLIENT_FPS);
         });
     }
 
@@ -304,9 +310,6 @@ impl StatisticsTab {
                 "{} packets ({} packets/s)",
                 statistics.video_packets_total, statistics.video_packets_per_sec
             ));
-            //ui[0].label("Total packets lost:");
-            ui[0].label("Total sent:");
-            ui[1].label(&format!("{} packets", statistics.video_packets_total));
 
             ui[0].label("Total sent:");
             ui[1].label(&format!("{} MB", statistics.video_mbytes_total));
@@ -314,7 +317,6 @@ impl StatisticsTab {
             ui[0].label("Bitrate:");
             ui[1].label(&format!("{} Mbps", statistics.video_mbits_per_sec));
 
-            //ui[0].label("Ping:");
             ui[0].label("Total latency:");
             ui[1].label(&format!("{:.2} ms", statistics.total_latency_ms));
 
@@ -338,6 +340,9 @@ impl StatisticsTab {
 
             ui[0].label("Server FPS:");
             ui[1].label(&format!("{} FPS", statistics.server_fps));
+
+            ui[0].label("Headset battery");
+            ui[1].label(&format!("{}%", statistics.battery_hmd));
         });
     }
 }

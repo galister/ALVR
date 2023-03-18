@@ -235,6 +235,7 @@ pub enum CodecType {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct VideoDesc {
+    #[schema(strings(help = "You probably don't want to change this"))]
     pub adapter_index: u32,
 
     pub render_resolution: FrameSize,
@@ -563,9 +564,6 @@ pub struct Patches {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct ExtraDesc {
-    pub revert_confirm_dialog: bool,
-    pub restart_confirm_dialog: bool,
-    pub prompt_before_update: bool,
     pub log_to_disk: bool,
     pub log_button_presses: bool,
     pub log_haptics: bool,
@@ -884,9 +882,6 @@ pub fn session_settings_default() -> SettingsDefault {
             }
         },
         extra: ExtraDescDefault {
-            revert_confirm_dialog: true,
-            restart_confirm_dialog: true,
-            prompt_before_update: true,
             log_to_disk: cfg!(debug_assertions),
             log_button_presses: false,
             log_haptics: false,
