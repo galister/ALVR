@@ -316,7 +316,6 @@ async fn stream_pipeline(
         foveated_rendering: settings.video.foveated_rendering.into_option(),
         oculus_foveation_level: settings.video.oculus_foveation_level,
         dynamic_oculus_foveation: settings.video.dynamic_oculus_foveation,
-        extra_latency: settings.headset.extra_latency_mode,
     };
 
     IS_STREAMING.set(true);

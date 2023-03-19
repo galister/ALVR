@@ -34,7 +34,7 @@ impl Control {
         gui: NumericGuiType,
         suffix: Option<String>,
     ) -> Self {
-        let default_string = format!("\"{default}\"");
+        let default_string = format!("{default}{}", suffix.clone().unwrap_or_default());
 
         Self {
             nesting_info,

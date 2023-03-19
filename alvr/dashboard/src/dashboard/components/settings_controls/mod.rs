@@ -120,7 +120,12 @@ impl SettingControl {
             SettingControl::Text(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Numeric(control) => control.ui(ui, session_fragment, allow_inline),
             SettingControl::Array(control) => control.ui(ui, session_fragment, allow_inline),
-            SettingControl::None => None,
+            SettingControl::None => {
+                grid_flow_inline(ui, allow_inline);
+                ui.add_enabled_ui(false, |ui| ui.label("Unimplemented UI"));
+
+                None
+            }
         }
     }
 }

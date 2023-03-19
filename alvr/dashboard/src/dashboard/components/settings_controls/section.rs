@@ -95,7 +95,7 @@ impl Control {
                     popup::show_tooltip_text(
                         ui.ctx(),
                         egui::Id::new(POPUP_ID),
-                        "Changing this setting will make SteamVR restart!",
+                        "Changing this setting will make SteamVR restart!\nPlease save your in-game progress first",
                     );
                 }
             });

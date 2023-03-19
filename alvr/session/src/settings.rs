@@ -64,41 +64,68 @@ pub enum RateControlMode {
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 #[schema(gui = "button_group")]
 pub enum EntropyCoding {
-    #[schema(strings(display_name = "CABAC"))]
-    Cabac = 0,
     #[schema(strings(display_name = "CAVLC"))]
     Cavlc = 1,
+    #[schema(strings(display_name = "CABAC"))]
+    Cabac = 0,
 }
 
 /// Except for preset, the value of these fields is not applied if == -1 (flag)
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct NvencOverrides {
     pub tuning_preset: NvencTuningPreset,
+    #[schema(strings(
+        help = "Reduce compression artifacts at the cost of small performance penalty"
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub multi_pass: NvencMultiPass,
+    #[schema(strings(
+        help = r#"Spatial: Helps reduce color banding, but high-complexity scenes might look worse.
+Temporal: Helps improve overall encoding quality, very small trade-off in speed."#
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub adaptive_quantization_mode: NvencAdaptiveQuantizationMode,
+    #[schema(flag = "steamvr-restart")]
     pub low_delay_key_frame_scale: i64,
+    #[schema(flag = "steamvr-restart")]
     pub refresh_rate: i64,
+    #[schema(flag = "steamvr-restart")]
     pub enable_intra_refresh: bool,
+    #[schema(flag = "steamvr-restart")]
     pub intra_refresh_period: i64,
+    #[schema(flag = "steamvr-restart")]
     pub intra_refresh_count: i64,
+    #[schema(flag = "steamvr-restart")]
     pub max_num_ref_frames: i64,
+    #[schema(flag = "steamvr-restart")]
     pub gop_length: i64,
+    #[schema(flag = "steamvr-restart")]
     pub p_frame_strategy: i64,
+    #[schema(flag = "steamvr-restart")]
     pub rate_control_mode: i64,
+    #[schema(flag = "steamvr-restart")]
     pub rc_buffer_size: i64,
+    #[schema(flag = "steamvr-restart")]
     pub rc_initial_delay: i64,
+    #[schema(flag = "steamvr-restart")]
     pub rc_max_bitrate: i64,
+    #[schema(flag = "steamvr-restart")]
     pub rc_average_bitrate: i64,
+    #[schema(flag = "steamvr-restart")]
     pub enable_weighted_prediction: bool,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct AmfControls {
+    #[schema(flag = "steamvr-restart")]
     pub enable_vbaq: bool,
+    #[schema(flag = "steamvr-restart")]
     pub use_preproc: bool,
     #[schema(gui(slider(min = 0, max = 10)))]
+    #[schema(flag = "steamvr-restart")]
     pub preproc_sigma: u32,
     #[schema(gui(slider(min = 0, max = 10)))]
+    #[schema(flag = "steamvr-restart")]
     pub preproc_tor: u32,
 }
 
@@ -113,24 +140,36 @@ pub enum MediacodecDataType {
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 
 pub struct AdvancedCodecOptions {
+    #[schema(flag = "streamvr-restart")]
     pub encoder_quality_preset: EncoderQualityPreset,
+
+    #[schema(flag = "streamvr-restart")]
     pub nvenc_overrides: NvencOverrides,
+
+    #[schema(flag = "streamvr-restart")]
     pub amf_controls: AmfControls,
+
     pub mediacodec_extra_options: Vec<(String, MediacodecDataType)>,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 #[schema(gui = "button_group")]
 pub enum BitrateMode {
-    ConstantMbps(#[schema(gui(slider(min = 1, max = 1000)))] u64),
+    #[schema(strings(display_name = "Constant"))]
+    ConstantMbps(#[schema(gui(slider(min = 1, max = 1000, logarithmic)), suffix = "Mbps")] u64),
     Adaptive {
+        #[schema(strings(
+            help = "Percentage of network bandwidth to allocate for video transmission"
+        ))]
         #[schema(gui(slider(min = 0.5, max = 2.0, step = 0.05)))]
         saturation_multiplier: f32,
 
-        #[schema(gui(slider(min = 1, max = 1000)))]
+        #[schema(strings(display_name = "Maximum bitrate"))]
+        #[schema(gui(slider(min = 1, max = 1000)), suffix = "Mbps")]
         max_bitrate_mbps: Switch<u64>,
 
-        #[schema(gui(slider(min = 1, max = 1000)))]
+        #[schema(strings(display_name = "Minimum bitrate"))]
+        #[schema(gui(slider(min = 1, max = 1000)), suffix = "Mbps")]
         min_bitrate_mbps: Switch<u64>,
     },
 }
@@ -142,15 +181,27 @@ pub struct BitrateConfig {
     #[schema(gui(slider(min = 0.01, max = 2.0, step = 0.01)))]
     pub framerate_reset_threshold_multiplier: f32,
 
-    #[schema(gui(slider(min = 1, max = 50)))]
+    #[schema(strings(display_name = "Maximum network latency"))]
+    #[schema(gui(slider(min = 1, max = 50)), suffix = "ms")]
     pub max_network_latency_ms: Switch<u64>,
 
-    #[schema(gui(slider(min = 1, max = 50)))]
+    #[schema(strings(
+        display_name = "Maximum decoder latency",
+        help = "When the decoder latency goes above this threshold, the bitrate will be reduced"
+    ))]
+    #[schema(gui(slider(min = 1, max = 50)), suffix = "ms")]
     pub max_decoder_latency_ms: u64,
 
-    #[schema(gui(slider(min = 1, max = 100)))]
+    #[schema(strings(
+        display_name = "Decoder latency overstep",
+        help = "Number of consecutive frames above the threshold to trigger a bitrate reduction"
+    ))]
+    #[schema(gui(slider(min = 1, max = 100)), suffix = " frames")]
     pub decoder_latency_overstep_frames: u64,
 
+    #[schema(strings(
+        help = "Controls how much the bitrate is reduced when the decoder latency goes above the threshold"
+    ))]
     #[schema(gui(slider(min = 0.5, max = 1.0)))]
     pub decoder_latency_overstep_multiplier: f32,
 }
@@ -167,40 +218,34 @@ pub enum OculusFovetionLevel {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct FoveatedRenderingDesc {
-    #[schema(
-        strings(display_name = "Center region width"),
-        gui(slider(min = 0.0, max = 1.0, step = 0.01))
-    )]
+    #[schema(strings(display_name = "Center region width"))]
+    #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub center_size_x: f32,
 
-    #[schema(
-        strings(display_name = "Center region height"),
-        gui(slider(min = 0.0, max = 1.0, step = 0.01))
-    )]
+    #[schema(strings(display_name = "Center region height"))]
+    #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub center_size_y: f32,
 
-    #[schema(
-        strings(display_name = "Center shift X"),
-        gui(slider(min = -1.0, max = 1.0, step = 0.01))
-    )]
+    #[schema(strings(display_name = "Center shift X"))]
+    #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub center_shift_x: f32,
 
-    #[schema(
-        strings(display_name = "Center shift Y"),
-        gui(slider(min = -1.0, max = 1.0, step = 0.01))
-    )]
+    #[schema(strings(display_name = "Center shift Y"))]
+    #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub center_shift_y: f32,
 
-    #[schema(
-        strings(display_name = "Horizontal edge ratio"),
-        gui(slider(min = 1.0, max = 10.0, step = 1.0))
-    )]
+    #[schema(strings(display_name = "Horizontal edge ratio"))]
+    #[schema(gui(slider(min = 1.0, max = 10.0, step = 1.0)))]
+    #[schema(flag = "steamvr-restart")]
     pub edge_ratio_x: f32,
 
-    #[schema(
-        strings(display_name = "Vertical edge ratio"),
-        gui(slider(min = 1.0, max = 10.0, step = 1.0))
-    )]
+    #[schema(strings(display_name = "Vertical edge ratio"))]
+    #[schema(gui(slider(min = 1.0, max = 10.0, step = 1.0)))]
+    #[schema(flag = "steamvr-restart")]
     pub edge_ratio_y: f32,
 }
 
@@ -208,18 +253,23 @@ pub struct FoveatedRenderingDesc {
 #[derive(SettingsSchema, Clone, Copy, Serialize, Deserialize, Pod, Zeroable)]
 pub struct ColorCorrectionDesc {
     #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub brightness: f32,
 
     #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub contrast: f32,
 
     #[schema(gui(slider(min = -1.0, max = 1.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub saturation: f32,
 
     #[schema(gui(slider(min = 0.0, max = 5.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub gamma: f32,
 
     #[schema(gui(slider(min = -1.0, max = 5.0, step = 0.01)))]
+    #[schema(flag = "steamvr-restart")]
     pub sharpening: f32,
 }
 
@@ -236,53 +286,97 @@ pub enum CodecType {
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct VideoDesc {
     #[schema(strings(help = "You probably don't want to change this"))]
+    #[schema(flag = "steamvr-restart")]
     pub adapter_index: u32,
 
+    #[schema(strings(
+        display_name = "Transcoding resolution",
+        help = "Resolution used for encoding and decoding"
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub render_resolution: FrameSize,
 
+    #[schema(strings(
+        display_name = "Emulated headset resolution",
+        help = "This is the resolution that SteamVR will use as a baseline for the game rendering"
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub recommended_target_resolution: FrameSize,
 
-    #[schema(
-        strings(display_name = "Preferred FPS"),
-        gui(slider(min = 60.0, max = 120.0))
-    )]
+    #[schema(strings(display_name = "Preferred FPS"))]
+    #[schema(gui(slider(min = 60.0, max = 120.0)), suffix = "Hz")]
+    #[schema(flag = "steamvr-restart")]
     pub preferred_fps: f32,
 
     #[schema(
-        strings(display_name = "Maximum buffering (frames)"),
-        gui(slider(min = 1.0, max = 10.0, step = 0.1))
+        strings(
+            display_name = "Maximum buffering",
+            help = "Incresing this value will help reduce stutter but it will increase latency"
+        ),
+        gui(slider(min = 1.0, max = 10.0, step = 0.1, logarithmic)),
+        suffix = " frames"
     )]
     pub max_buffering_frames: f32,
 
     #[schema(gui(slider(min = 0.50, max = 0.99, step = 0.01)))]
     pub buffering_history_weight: f32,
 
+    #[schema(strings(
+        help = "HEVC may provide better visual fidelity at the cost of increased encoder latency"
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub codec: CodecType,
 
+    #[schema(strings(help = r#"CBR: Constant BitRate mode. This is recommended.
+VBR: Variable BitRate mode. Not commended because it may throw off the adaptive bitrate algorithm. This is only supported on Windows and only with AMD/Nvidia GPUs"#))]
+    #[schema(flag = "steamvr-restart")]
     pub rate_control_mode: RateControlMode,
 
+    #[schema(strings(
+        help = r#"In CBR mode, this makes sure the bitrate does not fall below the assigned value. This is mostly useful for debugging."#
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub filler_data: bool,
 
+    #[schema(strings(help = r#"CAVLC algorithm is recommended.
+CABAC produces better compression but it's significantly slower and may lead to runaway latency"#))]
+    #[schema(flag = "steamvr-restart")]
     pub entropy_coding: EntropyCoding,
 
+    #[schema(strings(
+        display_name = "Reduce color banding",
+        help = "Sets the encoder to use 10 bits per channel instead of 8. Does not work on Linux with Nvidia"
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub use_10bit_encoder: bool,
 
+    #[schema(strings(
+        display_name = "Force software encoding",
+        help = "Forces the encoder to use CPU instead of GPU"
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub force_sw_encoding: bool,
 
+    #[schema(strings(display_name = "Software encoder thread count"))]
+    #[schema(flag = "steamvr-restart")]
     pub sw_thread_count: u32,
 
     pub bitrate: BitrateConfig,
 
+    #[schema(flag = "steamvr-restart")]
     pub advanced_codec_options: AdvancedCodecOptions,
 
+    #[schema(flag = "steamvr-restart")]
     pub seconds_from_vsync_to_photons: f32,
 
+    #[schema(flag = "steamvr-restart")]
     pub foveated_rendering: Switch<FoveatedRenderingDesc>,
 
     pub oculus_foveation_level: OculusFovetionLevel,
 
     pub dynamic_oculus_foveation: bool,
 
+    #[schema(flag = "steamvr-restart")]
     pub color_correction: Switch<ColorCorrectionDesc>,
 }
 
@@ -295,13 +389,12 @@ pub enum AudioDeviceId {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct AudioBufferingConfig {
-    #[schema(
-        strings(display_name = "Average buffering (ms)"),
-        gui(slider(min = 0, max = 200))
-    )]
+    #[schema(strings(display_name = "Average buffering"))]
+    #[schema(gui(slider(min = 0, max = 200)), suffix = "ms")]
     pub average_buffering_ms: u64,
 
-    #[schema(strings(display_name = "Batch (ms)"), gui(slider(min = 1, max = 20)))]
+    #[schema(strings(display_name = "Batch size"))]
+    #[schema(gui(slider(min = 1, max = 20)), suffix = "ms")]
     pub batch_ms: u64,
 }
 
@@ -336,6 +429,7 @@ pub enum LinuxAudioBackend {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct AudioSection {
+    #[schema(strings(help = "ALSA is recommended for most PulseAudio or PipeWire-based setups"))]
     pub linux_backend: LinuxAudioBackend,
 
     pub game_audio: Switch<GameAudioDesc>,
@@ -374,7 +468,8 @@ pub struct HapticsConfig {
     #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.01)))]
     pub amplitude_curve: f32,
 
-    #[schema(gui(slider(min = 0.0, max = 0.1, step = 0.001)))]
+    #[schema(strings(display_name = "Minimum duration"))]
+    #[schema(gui(slider(min = 0.0, max = 0.1, step = 0.001)), suffix = "s")]
     pub min_duration_s: f32,
 
     #[schema(gui(slider(min = 1.0, max = 5.0, step = 0.1)))]
@@ -386,47 +481,72 @@ pub struct HapticsConfig {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct ControllersDesc {
+    #[schema(flag = "steamvr-restart")]
     pub mode_idx: i32,
 
+    #[schema(flag = "steamvr-restart")]
     pub tracking_system_name: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub manufacturer_name: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub model_number: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub render_model_name_left: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub render_model_name_right: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub serial_number: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub ctrl_type_left: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub ctrl_type_right: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub registered_device_type: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub input_profile_path: String,
 
-    #[schema(gui(slider(min = -100, max = 100)))]
+    #[schema(strings(
+        display_name = "Pose time offset",
+        help = "This controls how smooth the controllers should track"
+    ))]
+    #[schema(gui(slider(min = -1000, max = 1000, logarithmic)), suffix = "ms")]
     pub pose_time_offset_ms: i64,
 
-    #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.001)))]
+    // note: logarithmic scale seems to be glitchy for this control
+    #[schema(gui(slider(min = 0.0, max = 1.0, step = 0.01)), suffix = "m/s")]
     pub linear_velocity_cutoff: f32,
 
-    #[schema(gui(slider(min = 0.0, max = 100.0, step = 1.0)))]
+    // note: logarithmic scale seems to be glitchy for this control
+    #[schema(gui(slider(min = 0.0, max = 100.0, step = 1.0)), suffix = "°/s")]
     pub angular_velocity_cutoff: f32,
 
+    // note: logarithmic scale seems to be glitchy for this control
+    #[schema(gui(slider(min = -0.5, max = 0.5, step = 0.001)), suffix = "m")]
     pub left_controller_position_offset: [f32; 3],
 
+    #[schema(gui(slider(min = -180.0, max = 180.0, step = 1.0)), suffix = "°")]
     pub left_controller_rotation_offset: [f32; 3],
 
+    // note: logarithmic scale seems to be glitchy for this control
+    #[schema(gui(slider(min = -0.5, max = 0.5, step = 0.001)), suffix = "m")]
     pub left_hand_tracking_position_offset: [f32; 3],
 
+    #[schema(gui(slider(min = -180.0, max = 180.0, step = 1.0)), suffix = "°")]
     pub left_hand_tracking_rotation_offset: [f32; 3],
 
+    #[schema(flag = "steamvr-restart")]
     pub override_trigger_threshold: Switch<ControllersTriggerOverrideDesc>,
 
+    #[schema(flag = "steamvr-restart")]
     pub override_grip_threshold: Switch<ControllersGripOverrideDesc>,
 
     pub haptics: Switch<HapticsConfig>,
@@ -438,8 +558,10 @@ pub struct ControllersDesc {
 pub enum PositionRecenteringMode {
     Disabled,
     LocalFloor,
-
-    Local { view_height: f32 },
+    Local {
+        #[schema(gui(slider(min = 0.0, max = 3.0)), suffix = "m")]
+        view_height: f32,
+    },
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone, Copy)]
@@ -451,46 +573,71 @@ pub enum RotationRecenteringMode {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct HeadsetDesc {
+    #[schema(flag = "steamvr-restart")]
     pub mode_idx: u64,
 
+    #[schema(flag = "steamvr-restart")]
     pub universe_id: u64,
 
+    #[schema(flag = "steamvr-restart")]
     pub serial_number: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub tracking_system_name: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub model_number: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub driver_version: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub manufacturer_name: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub render_model_name: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub registered_device_type: String,
 
+    #[schema(flag = "steamvr-restart")]
     pub tracking_ref_only: bool,
 
+    #[schema(flag = "steamvr-restart")]
     pub enable_vive_tracker_proxy: bool,
 
+    #[schema(flag = "steamvr-restart")]
     pub controllers: Switch<ControllersDesc>,
 
+    #[schema(strings(
+        help = r#"Disabled: the playspace origin is determined by the room-scale guardian setup.
+Local floor: the origin is on the floor and resets when long pressing the oculus button.
+Local: the origin resets when long pressing the oculus button, and is calculated as an offset from the current head position."#
+    ))]
     pub position_recentering_mode: PositionRecenteringMode,
 
+    #[schema(strings(
+        help = r#"Disabled: the playspace orientation is determined by the room-scale guardian setup.
+Yaw: the forward direction is reset when long pressing the oculus button.
+Tilted: the world gets tilted when long pressing the oculus button. This is useful for using VR while laying down."#
+    ))]
     pub rotation_recentering_mode: RotationRecenteringMode,
-
-    pub extra_latency_mode: bool,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 #[schema(gui = "button_group")]
 pub enum SocketProtocol {
+    #[schema(strings(display_name = "UDP"))]
     Udp,
+    #[schema(strings(display_name = "TCP"))]
     Tcp,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct DiscoveryConfig {
+    #[schema(strings(
+        help = "Allow untrusted clients to connect without confirmation. This is not recommended for security reasons."
+    ))]
     pub auto_trust_clients: bool,
 }
 
@@ -498,12 +645,16 @@ pub struct DiscoveryConfig {
 pub enum SocketBufferSize {
     Default,
     Maximum,
-    Custom(u32),
+    Custom(#[schema(suffix = "B")] u32),
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct DisconnectionCriteria {
+    #[schema(strings(display_name = "latency threshold"))]
+    #[schema(gui(slider(min = 20, max = 1000, logarithmic)), suffix = "ms")]
     pub latency_threshold_ms: u64,
+
+    #[schema(strings(display_name = "Sustain duration"), suffix = "s")]
     pub sustain_duration_s: u64,
 }
 
@@ -511,30 +662,47 @@ pub struct DisconnectionCriteria {
 pub struct ConnectionDesc {
     pub client_discovery: Switch<DiscoveryConfig>,
 
-    #[schema(gui(slider(min = 0x400, max = 0xFFFF)))]
     pub web_server_port: u16,
 
+    #[schema(strings(
+        help = r#"UDP: Faster, but less stable than TCP. Try this if your network is well optimized and free of interference.
+TCP: Slower than UDP, but more stable. Pick this if you experience video or audio stutters with UDP."#
+    ))]
     pub stream_protocol: SocketProtocol,
 
+    #[schema(strings(display_name = "Server send buffer size"))]
     pub server_send_buffer_bytes: SocketBufferSize,
 
+    #[schema(strings(display_name = "Server receive buffer size"))]
     pub server_recv_buffer_bytes: SocketBufferSize,
 
+    #[schema(strings(display_name = "Client send buffer size"))]
     pub client_send_buffer_bytes: SocketBufferSize,
 
+    #[schema(strings(display_name = "Client receive buffer size"))]
     pub client_recv_buffer_bytes: SocketBufferSize,
 
     pub stream_port: u16,
 
+    #[schema(strings(
+        help = "Reduce minimum delay between keyframes from 100ms to 5ms. Use on networks with high packet loss."
+    ))]
     pub aggressive_keyframe_resend: bool,
 
+    #[schema(strings(
+        help = "This script will be ran when the headset connects. Env var ACTION will be set to `connect`."
+    ))]
     pub on_connect_script: String,
 
+    #[schema(strings(
+        help = "This script will be ran when the headset disconnects, or when SteamVR shuts down. Env var ACTION will be set to `disconnect`."
+    ))]
     pub on_disconnect_script: String,
 
-    #[schema(gui(slider(min = 1024, max = 65507)))]
+    #[schema(gui(slider(min = 1024, max = 65507, logarithmic)), suffix = "B")]
     pub packet_size: i32,
 
+    #[schema(suffix = " frames")]
     pub statistics_history_size: u64,
 
     pub disconnection_criteria: Switch<DisconnectionCriteria>,
@@ -543,6 +711,7 @@ pub struct ConnectionDesc {
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub enum DriverLaunchAction {
     UnregisterOtherDriversAtStartup,
+    #[schema(strings(display_name = "Unregister ALVR at shutdown"))]
     UnregisterAlvrAtShutdown,
     NoAction,
 }
@@ -558,21 +727,32 @@ pub enum LogLevel {
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct Patches {
-    pub remove_sync_popup: bool,
+    #[schema(strings(
+        help = "May cause jitter for Nvidia users. AMD users should keep this on. Must be off for Nvidia GPUs!",
+    ))]
+    #[schema(flag = "steamvr-restart")]
     pub linux_async_reprojection: bool,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct ExtraDesc {
+    #[schema(strings(help = "Write logs into the session_log.txt file."))]
     pub log_to_disk: bool,
     pub log_button_presses: bool,
     pub log_haptics: bool,
     pub save_video_stream: bool,
 
+    #[schema(strings(
+        help = r#"This controls the driver registration operations while launching SteamVR.
+Unregister other drivers at startup: This is the recommended option and will handle most interferences from other installed drivers.
+Unregister ALVR at shutdown: This should be used when you want to load other drivers like for full body tracking. Other VR streaming drivers like Virtual Desktop must be manually unregistered or uninstalled.
+No action: All driver registration actions should be performed mnually, ALVR included. This allows to launch SteamVR without launching the dashboard first."#
+    ))]
     pub driver_launch_action: DriverLaunchAction,
 
     pub notification_level: LogLevel,
 
+    #[schema(flag = "steamvr-restart")]
     pub capture_frame_dir: String,
 
     pub open_setup_wizard: bool,
@@ -844,7 +1024,6 @@ pub fn session_settings_default() -> SettingsDefault {
             rotation_recentering_mode: RotationRecenteringModeDefault {
                 variant: RotationRecenteringModeDefaultVariant::Yaw,
             },
-            extra_latency_mode: false,
         },
         connection: {
             let socket_buffer = SocketBufferSizeDefault {
@@ -902,7 +1081,6 @@ pub fn session_settings_default() -> SettingsDefault {
                 "".into()
             },
             patches: PatchesDefault {
-                remove_sync_popup: false,
                 linux_async_reprojection: false,
             },
             open_setup_wizard: alvr_common::is_stable() || alvr_common::is_nightly(),
