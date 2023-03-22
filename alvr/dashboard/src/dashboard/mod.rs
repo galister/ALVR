@@ -1,16 +1,19 @@
 mod basic_components;
 mod components;
 
-use self::components::{ConnectionsTab, InstallationTab, LogsTab, SettingsTab, SetupWizard};
+use self::components::{
+    ConnectionsTab, InstallationTab, InstallationTabRequest, LogsTab, NotificationBar, SettingsTab,
+    SetupWizard, SetupWizardRequest,
+};
 use crate::{dashboard::components::StatisticsTab, steamvr_launcher::LAUNCHER, theme, ServerEvent};
 use alvr_common::RelaxedAtomic;
-use alvr_events::{EventType, LogEvent};
+use alvr_events::EventType;
 use alvr_session::SessionDesc;
 use alvr_sockets::DashboardRequest;
 use eframe::{
     egui::{
         self, style::Margin, Align, CentralPanel, Frame, Layout, RichText, ScrollArea, SidePanel,
-        Stroke, TopBottomPanel,
+        Stroke,
     },
     epaint::Color32,
 };
@@ -20,8 +23,6 @@ use std::{
     sync::{atomic::AtomicUsize, mpsc, Arc},
     thread,
 };
-
-const NOTIFICATION_BAR_HEIGHT: f32 = 30.0;
 
 #[derive(Clone)]
 pub struct DisplayString {
@@ -60,6 +61,7 @@ enum Tab {
 }
 
 pub struct Dashboard {
+    just_opened: bool,
     connected_to_server: bool,
     server_restarting: Arc<RelaxedAtomic>,
     selected_tab: Tab,
@@ -69,8 +71,9 @@ pub struct Dashboard {
     settings_tab: SettingsTab,
     installation_tab: InstallationTab,
     logs_tab: LogsTab,
-    notification: Option<LogEvent>,
-    setup_wizard: Option<SetupWizard>,
+    notification_bar: NotificationBar,
+    setup_wizard: SetupWizard,
+    setup_wizard_open: bool,
     session: SessionDesc,
     dashboard_requests_sender: mpsc::Sender<DashboardRequest>,
     server_events_receiver: mpsc::Receiver<ServerEvent>,
@@ -92,6 +95,7 @@ impl Dashboard {
         theme::set_theme(&creation_context.egui_ctx);
 
         Self {
+            just_opened: true,
             connected_to_server: false,
             server_restarting: Arc::new(RelaxedAtomic::new(false)),
             selected_tab: Tab::Connections,
@@ -110,8 +114,9 @@ impl Dashboard {
             settings_tab: SettingsTab::new(),
             installation_tab: InstallationTab::new(),
             logs_tab: LogsTab::new(),
-            notification: None,
-            setup_wizard: None,
+            notification_bar: NotificationBar::new(),
+            setup_wizard: SetupWizard::new(),
+            setup_wizard_open: false,
             session: SessionDesc::default(),
             dashboard_requests_sender,
             server_events_receiver,
@@ -134,9 +139,20 @@ impl eframe::App for Dashboard {
                             self.statistics_tab.update_statistics(statistics)
                         }
                         EventType::Session(session) => {
-                            self.session = *session.clone();
+                            let settings = session.to_settings();
+
                             self.settings_tab.update_session(&session.session_settings);
-                            self.logs_tab.update_session(&session.session_settings);
+                            self.logs_tab.update_settings(&settings);
+                            self.notification_bar.update_settings(&settings);
+                            if self.just_opened {
+                                if settings.extra.open_setup_wizard {
+                                    self.setup_wizard_open = true;
+                                }
+
+                                self.just_opened = false;
+                            }
+
+                            self.session = *session;
                         }
                         EventType::ServerRequestsSelfRestart => {
                             if !self.server_restarting.value() {
@@ -150,33 +166,12 @@ impl eframe::App for Dashboard {
                                 });
                             }
                         }
-                        _ => {
-                            // Create a notification based on the notification level in the settings
-                            // match self.session.to_settings().extra.notification_level {
-                            //     LogLevel::Debug => self.notification = Some(log.to_owned()),
-                            //     LogLevel::Info => match log.severity {
-                            //         EventSeverity::Info | EventSeverity::Warning | EventSeverity::Error => {
-                            //             self.notification = Some(log.to_owned())
-                            //         }
-                            //         _ => (),
-                            //     },
-                            //     LogLevel::Warning => match log.severity {
-                            //         EventSeverity::Warning | EventSeverity::Error => {
-                            //             self.notification = Some(log.to_owned())
-                            //         }
-                            //         _ => (),
-                            //     },
-                            //     LogLevel::Error => match log.severity {
-                            //         EventSeverity::Error => self.notification = Some(log.to_owned()),
-                            //         _ => (),
-                            //     },
-                            // }
+                        EventType::Log(event) => {
+                            self.notification_bar.push_notification(event);
                         }
+                        _ => (),
                     }
                 }
-                // ServerEvent::DriverResponse(drivers) => {
-                //     self.dashboard.new_drivers(drivers);
-                // }
                 ServerEvent::PingResponseConnected => {
                     self.connected_to_server = true;
                     self.installation_tab.update_drivers();
@@ -204,152 +199,118 @@ impl eframe::App for Dashboard {
             return;
         }
 
+        self.notification_bar.ui(context);
+
         let mut requests = vec![];
 
-        match &mut self.setup_wizard {
-            Some(setup_wizard) => {
-                CentralPanel::default().show(context, |ui| {
-                    if let Some(request) = setup_wizard.ui(ui) {
-                        requests.push(request);
+        if self.setup_wizard_open {
+            CentralPanel::default().show(context, |ui| {
+                if let Some(SetupWizardRequest::Close { finished }) = self.setup_wizard.ui(ui) {
+                    if finished {
+                        requests.push(DashboardRequest::SetSingleValue {
+                            path: alvr_sockets::parse_path(
+                                "session_settings.extra.open_setup_wizard",
+                            ),
+                            new_value: serde_json::Value::Bool(false),
+                        });
                     }
-                });
-            }
-            None => {
-                // if match &self.notification {
-                //     Some(log) => {
-                //         let (fg, bg) = match log.severity {
-                //             EventSeverity::Debug => (theme::FG, theme::DEBUG),
-                //             EventSeverity::Info => (theme::BG, theme::INFO),
-                //             EventSeverity::Warning => (theme::BG, theme::WARNING),
-                //             EventSeverity::Error => (theme::FG, theme::ERROR),
-                //         };
-                //         TopBottomPanel::bottom("bottom_panel")
-                //             .default_height(NOTIFICATION_BAR_HEIGHT)
-                //             .min_height(NOTIFICATION_BAR_HEIGHT)
-                //             .frame(
-                //                 Frame::default()
-                //                     .inner_margin(Margin::same(5.0))
-                //                     .fill(bg)
-                //                     .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
-                //             )
-                //             .show(ctx, |ui| {
-                //                 ui.horizontal(|ui| {
-                //                     ui.add(
-                //                         Label::new(RichText::new(&log.content).color(fg))
-                //                             .wrap(true),
-                //                     );
-                //                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                //                         ui.button("❌").clicked()
-                //                     })
-                //                     .inner
-                //                 })
-                //                 .inner
-                //             })
-                //             .inner
-                //     }
-                //     None => {
-                //         TopBottomPanel::bottom("bottom_panel")
-                //             .default_height(NOTIFICATION_BAR_HEIGHT)
-                //             .min_height(NOTIFICATION_BAR_HEIGHT)
-                //             .frame(
-                //                 Frame::default()
-                //                     .inner_margin(Margin::same(5.0))
-                //                     .fill(theme::LIGHTER_BG)
-                //                     .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
-                //             )
-                //             .show(ctx, |ui| ui.label("No new notifications"));
-                //         false
-                //     }
-                // } {
-                //     self.notification = None;
-                // }
 
-                SidePanel::left("side_panel")
-                    .resizable(false)
-                    .frame(
-                        Frame::none()
-                            .fill(theme::LIGHTER_BG)
-                            .inner_margin(Margin::same(7.0))
-                            .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
-                    )
-                    .exact_width(150.0)
-                    .show(context, |ui| {
-                        ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
-                            ui.add_space(13.0);
-                            ui.heading(RichText::new("ALVR").size(25.0).strong());
-                            egui::warn_if_debug_build(ui);
-                        });
+                    self.setup_wizard_open = false;
+                }
+            });
+        } else {
+            SidePanel::left("side_panel")
+                .resizable(false)
+                .frame(
+                    Frame::none()
+                        .fill(theme::LIGHTER_BG)
+                        .inner_margin(Margin::same(7.0))
+                        .stroke(Stroke::new(1.0, theme::SEPARATOR_BG)),
+                )
+                .exact_width(150.0)
+                .show(context, |ui| {
+                    ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
+                        ui.add_space(13.0);
+                        ui.heading(RichText::new("ALVR").size(25.0).strong());
+                        egui::warn_if_debug_build(ui);
+                    });
 
-                        ui.with_layout(Layout::top_down_justified(Align::Min), |ui| {
-                            for (tab, label) in &self.tab_labels {
-                                ui.selectable_value(&mut self.selected_tab, *tab, *label);
+                    ui.with_layout(Layout::top_down_justified(Align::Min), |ui| {
+                        for (tab, label) in &self.tab_labels {
+                            ui.selectable_value(&mut self.selected_tab, *tab, *label);
+                        }
+                    });
+
+                    ui.with_layout(
+                        Layout::bottom_up(Align::Center).with_cross_justify(true),
+                        |ui| {
+                            ui.add_space(5.0);
+                            if self.connected_to_server {
+                                if ui.button("Restart SteamVR").clicked() {
+                                    requests.push(DashboardRequest::RestartSteamvr);
+                                }
+                            } else if ui.button("Launch SteamVR").clicked() {
+                                thread::spawn(|| LAUNCHER.lock().launch_steamvr());
                             }
-                        });
 
-                        ui.with_layout(
-                            Layout::bottom_up(Align::Center).with_cross_justify(true),
-                            |ui| {
+                            ui.horizontal(|ui| {
                                 ui.add_space(5.0);
+                                ui.label("Streamer:");
+                                ui.add_space(-10.0);
                                 if self.connected_to_server {
-                                    if ui.button("Restart SteamVR").clicked() {
-                                        requests.push(DashboardRequest::RestartSteamvr);
-                                    }
-                                } else if ui.button("Launch SteamVR").clicked() {
-                                    thread::spawn(|| LAUNCHER.lock().launch_steamvr());
+                                    ui.label(RichText::new("Connected").color(Color32::GREEN));
+                                } else {
+                                    ui.label(RichText::new("Disconnected").color(Color32::RED));
                                 }
-
-                                ui.horizontal(|ui| {
-                                    ui.add_space(5.0);
-                                    ui.label("Streamer:");
-                                    ui.add_space(-10.0);
-                                    if self.connected_to_server {
-                                        ui.label(RichText::new("Connected").color(Color32::GREEN));
-                                    } else {
-                                        ui.label(RichText::new("Disconnected").color(Color32::RED));
-                                    }
-                                })
-                            },
-                        )
-                    });
-
-                CentralPanel::default()
-                    .frame(
-                        Frame::none()
-                            .inner_margin(Margin::same(20.0))
-                            .fill(theme::BG),
-                    )
-                    .show(context, |ui| {
-                        ui.with_layout(Layout::top_down_justified(Align::LEFT), |ui| {
-                            ui.heading(
-                                RichText::new(*self.tab_labels.get(&self.selected_tab).unwrap())
-                                    .size(25.0),
-                            );
-                            ScrollArea::new([false, true]).show(ui, |ui| match self.selected_tab {
-                                Tab::Connections => {
-                                    if let Some(request) = self.connections_tab.ui(
-                                        ui,
-                                        &self.session,
-                                        self.connected_to_server,
-                                    ) {
-                                        requests.push(request);
-                                    }
-                                }
-                                Tab::Statistics => {
-                                    if let Some(request) = self.statistics_tab.ui(ui) {
-                                        requests.push(request);
-                                    }
-                                }
-                                Tab::Settings => {
-                                    requests.extend(self.settings_tab.ui(ui));
-                                }
-                                Tab::Installation => self.installation_tab.ui(ui),
-                                Tab::Logs => self.logs_tab.ui(ui),
-                                Tab::About => components::about_tab_ui(ui),
                             })
+                        },
+                    )
+                });
+
+            CentralPanel::default()
+                .frame(
+                    Frame::none()
+                        .inner_margin(Margin::same(20.0))
+                        .fill(theme::BG),
+                )
+                .show(context, |ui| {
+                    ui.with_layout(Layout::top_down_justified(Align::LEFT), |ui| {
+                        ui.heading(
+                            RichText::new(*self.tab_labels.get(&self.selected_tab).unwrap())
+                                .size(25.0),
+                        );
+                        ScrollArea::new([false, true]).show(ui, |ui| match self.selected_tab {
+                            Tab::Connections => {
+                                if let Some(request) = self.connections_tab.ui(
+                                    ui,
+                                    &self.session,
+                                    self.connected_to_server,
+                                ) {
+                                    requests.push(request);
+                                }
+                            }
+                            Tab::Statistics => {
+                                if let Some(request) = self.statistics_tab.ui(ui) {
+                                    requests.push(request);
+                                }
+                            }
+                            Tab::Settings => {
+                                requests.extend(self.settings_tab.ui(ui));
+                            }
+                            Tab::Installation => {
+                                if matches!(
+                                    self.installation_tab.ui(ui),
+                                    Some(InstallationTabRequest::OpenSetupWizard)
+                                ) {
+                                    self.setup_wizard_open = true;
+                                }
+                            }
+                            Tab::Logs => self.logs_tab.ui(ui),
+                            Tab::About => components::about_tab_ui(ui),
                         })
-                    });
-            }
-        };
+                    })
+                });
+        }
 
         for request in requests {
             self.dashboard_requests_sender.send(request).ok();

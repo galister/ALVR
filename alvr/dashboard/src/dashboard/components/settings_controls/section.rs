@@ -1,7 +1,7 @@
 use super::{NestingInfo, SettingControl, INDENTATION_STEP};
 use crate::{
     dashboard::DisplayString,
-    theme::log_colors::{INFO_FG, WARNING_FG},
+    theme::log_colors::{INFO_LIGHT, WARNING_LIGHT},
 };
 use alvr_session::settings_schema::{SchemaEntry, SchemaNode};
 use alvr_sockets::DashboardRequest;
@@ -22,7 +22,7 @@ fn get_display_name(id: &str, strings: &HashMap<String, String>) -> String {
 struct Entry {
     id: DisplayString,
     help: Option<String>,
-    notice: Option<String>,
+    // notice: Option<String>,
     steamvr_restart_flag: bool,
     control: SettingControl,
 }
@@ -47,7 +47,7 @@ impl Control {
                 let id = entry.name;
                 let display = get_display_name(&id, &entry.strings);
                 let help = entry.strings.get("help").cloned();
-                let notice = entry.strings.get("notice").cloned();
+                // let notice = entry.strings.get("notice").cloned();
                 let steamvr_restart_flag = entry.flags.contains("steamvr-restart");
 
                 let mut nesting_info = nesting_info.clone();
@@ -56,7 +56,7 @@ impl Control {
                 Entry {
                     id: DisplayString { id, display },
                     help,
-                    notice,
+                    // notice,
                     steamvr_restart_flag,
                     control: SettingControl::new(nesting_info, entry.content),
                 }
@@ -87,11 +87,11 @@ impl Control {
                 ui.add_space(INDENTATION_STEP * self.nesting_info.indentation_level as f32);
                 ui.label(&entry.id.display);
                 if let Some(string) = &entry.help {
-                    if ui.colored_label(INFO_FG, "❓").hovered() {
+                    if ui.colored_label(INFO_LIGHT, "❓").hovered() {
                         popup::show_tooltip_text(ui.ctx(), egui::Id::new(POPUP_ID), string);
                     }
                 }
-                if entry.steamvr_restart_flag && ui.colored_label(WARNING_FG, "⚠").hovered() {
+                if entry.steamvr_restart_flag && ui.colored_label(WARNING_LIGHT, "⚠").hovered() {
                     popup::show_tooltip_text(
                         ui.ctx(),
                         egui::Id::new(POPUP_ID),

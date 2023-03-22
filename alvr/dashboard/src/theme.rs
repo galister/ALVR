@@ -10,19 +10,14 @@ pub const SELECTED: Color32 = Color32::from_rgb(120, 174, 237);
 pub const FG: Color32 = Color32::from_rgb(250, 250, 250);
 
 pub mod log_colors {
-    use super::{FG, LIGHTER_BG};
+    use super::ACCENT;
     use eframe::epaint::Color32;
 
-    pub const ERROR_FG: Color32 = Color32::from_rgb(192, 28, 40);
-    pub const WARNING_FG: Color32 = Color32::from_rgb(205, 147, 9);
-    pub const INFO_FG: Color32 = Color32::from_rgb(38, 162, 105);
-    pub const DEBUG_FG: Color32 = FG;
-    pub const EVENT_FG: Color32 = Color32::GRAY;
-
-    pub const ERROR_BG: Color32 = Color32::from_rgb(192, 28, 40);
-    pub const WARNING_BG: Color32 = Color32::from_rgb(205, 147, 9);
-    pub const INFO_BG: Color32 = Color32::from_rgb(38, 162, 105);
-    pub const DEBUG_BG: Color32 = LIGHTER_BG;
+    pub const ERROR_LIGHT: Color32 = Color32::from_rgb(255, 50, 50);
+    pub const WARNING_LIGHT: Color32 = Color32::from_rgb(205, 147, 9);
+    pub const INFO_LIGHT: Color32 = ACCENT;
+    pub const DEBUG_LIGHT: Color32 = Color32::LIGHT_GRAY;
+    pub const EVENT_LIGHT: Color32 = Color32::GRAY;
 }
 
 // Graph colors

@@ -16,6 +16,7 @@ alvr_session.workspace = true
 alvr_sockets.workspace = true
 
 bincode = "1"
+chrono = "0.4"
 eframe = { version = "0.21", default-features = false, features = [
     "wgpu",
     "default_fonts",

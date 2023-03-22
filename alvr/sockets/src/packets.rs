@@ -1,11 +1,15 @@
 use alvr_common::{
     glam::{Quat, UVec2, Vec2, Vec3},
-    Fov,
+    Fov, LogSeverity,
 };
-use alvr_events::{ButtonValue, EventSeverity, LogEvent};
+use alvr_events::{ButtonValue, LogEvent};
 use alvr_session::SessionDesc;
 use serde::{Deserialize, Serialize};
-use std::{net::IpAddr, time::Duration};
+use std::{
+    fmt::{self, Debug},
+    net::IpAddr,
+    time::Duration,
+};
 
 pub const TRACKING: u16 = 0;
 pub const HAPTICS: u16 = 1;
@@ -72,18 +76,9 @@ pub enum ClientControlPacket {
     ViewsConfig(ViewsConfig),
     Battery(BatteryPacket),
     VideoErrorReport, // legacy
-    Button {
-        path_id: u64,
-        value: ButtonValue,
-    },
-    ActiveInteractionProfile {
-        device_id: u64,
-        profile_id: u64,
-    },
-    Log {
-        level: EventSeverity,
-        message: String,
-    },
+    Button { path_id: u64, value: ButtonValue },
+    ActiveInteractionProfile { device_id: u64, profile_id: u64 },
+    Log { level: LogSeverity, message: String },
     Reserved(String),
     ReservedBuffer(Vec<u8>),
 }
@@ -129,10 +124,19 @@ pub enum GpuVendor {
     Other,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum PathSegment {
     Name(String),
     Index(usize),
+}
+
+impl Debug for PathSegment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PathSegment::Name(name) => write!(f, "{}", name),
+            PathSegment::Index(index) => write!(f, "[{}]", index),
+        }
+    }
 }
 
 impl From<&str> for PathSegment {

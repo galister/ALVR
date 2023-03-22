@@ -8,7 +8,6 @@ mod steamvr_launcher;
 mod theme;
 
 use alvr_common::{parking_lot::Mutex, ALVR_VERSION};
-use alvr_sockets::DashboardRequest;
 use dashboard::Dashboard;
 use data_sources::ServerEvent;
 use eframe::{egui, IconData, NativeOptions};
@@ -20,7 +19,8 @@ use std::{
 };
 
 fn main() {
-    logging_backend::init_logging();
+    let (server_events_sender, server_events_receiver) = mpsc::channel();
+    logging_backend::init_logging(server_events_sender.clone());
 
     let ico = IconDir::read(Cursor::new(include_bytes!("../resources/dashboard.ico"))).unwrap();
     let image = ico.entries().first().unwrap().decode().unwrap();
@@ -42,9 +42,7 @@ fn main() {
         {
             let data_thread = Arc::clone(&data_thread);
             Box::new(move |creation_context| {
-                let (dashboard_requests_sender, dashboard_requests_receiver) =
-                    mpsc::channel::<DashboardRequest>();
-                let (server_events_sender, server_events_receiver) = mpsc::channel::<ServerEvent>();
+                let (dashboard_requests_sender, dashboard_requests_receiver) = mpsc::channel();
 
                 let context = creation_context.egui_ctx.clone();
                 *data_thread.lock() = Some(thread::spawn(|| {

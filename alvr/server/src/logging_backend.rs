@@ -1,6 +1,6 @@
 use crate::{FILESYSTEM_LAYOUT, SERVER_DATA_MANAGER};
-use alvr_common::log::LevelFilter;
-use alvr_events::{Event, EventSeverity, EventType, LogEvent};
+use alvr_common::{log::LevelFilter, LogSeverity};
+use alvr_events::{Event, EventType, LogEvent};
 use chrono::Local;
 use fern::Dispatch;
 use std::fs;
@@ -27,7 +27,7 @@ pub fn init_logging(log_sender: Sender<String>, events_sender: Sender<Event>) {
             serde_json::from_str(&maybe_event).unwrap()
         } else {
             EventType::Log(LogEvent {
-                severity: EventSeverity::from_log_level(record.level()),
+                severity: LogSeverity::from_log_level(record.level()),
                 content: message.to_string(),
             })
         };

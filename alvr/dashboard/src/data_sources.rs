@@ -195,7 +195,7 @@ pub fn data_interop_thread(
     });
 
     while let Ok(request) = receiver.recv() {
-        debug!("dashboard request: {request:?}");
+        debug!("Dashboard request: {request:?}");
 
         match request_agent
             .get(&dashboard_request_uri)

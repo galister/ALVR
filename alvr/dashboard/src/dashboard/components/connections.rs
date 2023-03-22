@@ -42,16 +42,15 @@ impl ConnectionsTab {
 
         if !connected_to_server {
             Frame::group(ui.style())
-                .fill(log_colors::WARNING_BG)
+                .fill(log_colors::WARNING_LIGHT)
                 .show(ui, |ui| {
                     Grid::new(0).num_columns(2).show(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.add_space(10.0);
-                            ui.label(
+                            ui.heading(
                                 RichText::new(
                                     "The server is not connected! Clients will not be discovered",
                                 )
-                                .size(16.0)
                                 .color(Color32::BLACK),
                             );
                         });
@@ -137,19 +136,18 @@ impl ConnectionsTab {
                                     });
                                 }
                             });
+                            ui.end_row();
                         }
-                    })
-                });
+                    });
 
-            ui.add_space(10.0);
-
-            if ui.button("Add client manually").clicked() {
-                self.edit_popup_state = Some(EditPopupState {
-                    hostname: "XXXX.client.alvr".into(),
-                    new_client: true,
-                    ips: Vec::new(),
+                    if ui.button("Add client manually").clicked() {
+                        self.edit_popup_state = Some(EditPopupState {
+                            hostname: "XXXX.client.alvr".into(),
+                            new_client: true,
+                            ips: Vec::new(),
+                        });
+                    }
                 });
-            }
         });
 
         if let Some(mut state) = self.edit_popup_state.take() {

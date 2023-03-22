@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 
 use crate::theme::log_colors;
-use alvr_events::{Event, EventSeverity, EventType};
-use alvr_session::{LogLevelDefaultVariant, SessionSettings};
+use alvr_common::LogSeverity;
+use alvr_events::{Event, EventType};
+use alvr_session::Settings;
 use eframe::{
     egui::{Grid, ScrollArea, Ui},
     epaint::Color32,
@@ -30,11 +31,8 @@ impl LogsTab {
         }
     }
 
-    pub fn update_session(&mut self, session_settings: &SessionSettings) {
-        self.show_raw_events = matches!(
-            session_settings.extra.notification_level.variant,
-            LogLevelDefaultVariant::RawEvents
-        );
+    pub fn update_settings(&mut self, settings: &Settings) {
+        self.show_raw_events = settings.extra.show_raw_events;
     }
 
     pub fn push_event(&mut self, event: Event) {
@@ -43,20 +41,20 @@ impl LogsTab {
                 let color;
                 let ty;
                 match log_event.severity {
-                    EventSeverity::Error => {
-                        color = log_colors::ERROR_FG;
+                    LogSeverity::Error => {
+                        color = log_colors::ERROR_LIGHT;
                         ty = "ERROR";
                     }
-                    EventSeverity::Warning => {
-                        color = log_colors::WARNING_FG;
+                    LogSeverity::Warning => {
+                        color = log_colors::WARNING_LIGHT;
                         ty = "WARN";
                     }
-                    EventSeverity::Info => {
-                        color = log_colors::INFO_FG;
+                    LogSeverity::Info => {
+                        color = log_colors::INFO_LIGHT;
                         ty = "INFO";
                     }
-                    EventSeverity::Debug => {
-                        color = log_colors::DEBUG_FG;
+                    LogSeverity::Debug => {
+                        color = log_colors::DEBUG_LIGHT;
                         ty = "DEBUG";
                     }
                 };
@@ -71,7 +69,7 @@ impl LogsTab {
             event_type => {
                 if self.show_raw_events {
                     self.entries.push_back(Entry {
-                        color: log_colors::EVENT_FG,
+                        color: log_colors::EVENT_LIGHT,
                         timestamp: event.timestamp,
                         ty: "EVENT".into(),
                         message: format!("{event_type:?}"),

@@ -29,7 +29,7 @@ impl InstallationTab {
         }
     }
 
-    pub fn ui(&mut self, ui: &mut Ui) {
+    pub fn ui(&mut self, ui: &mut Ui) -> Option<InstallationTabRequest> {
         let mut response = None;
         ui.vertical_centered_justified(|ui| {
             if ui.button("Run setup wizard").clicked() {
@@ -79,5 +79,7 @@ impl InstallationTab {
                 self.update_drivers();
             }
         });
+
+        response
     }
 }

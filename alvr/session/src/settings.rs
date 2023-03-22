@@ -1,3 +1,4 @@
+use alvr_common::{LogSeverity, LogSeverityDefault, LogSeverityDefaultVariant};
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 use settings_schema::{DictionaryDefault, SettingsSchema, Switch, SwitchDefault};
@@ -165,11 +166,11 @@ pub enum BitrateMode {
         saturation_multiplier: f32,
 
         #[schema(strings(display_name = "Maximum bitrate"))]
-        #[schema(gui(slider(min = 1, max = 1000)), suffix = "Mbps")]
+        #[schema(gui(slider(min = 1, max = 1000, logarithmic)), suffix = "Mbps")]
         max_bitrate_mbps: Switch<u64>,
 
         #[schema(strings(display_name = "Minimum bitrate"))]
-        #[schema(gui(slider(min = 1, max = 1000)), suffix = "Mbps")]
+        #[schema(gui(slider(min = 1, max = 1000, logarithmic)), suffix = "Mbps")]
         min_bitrate_mbps: Switch<u64>,
     },
 }
@@ -717,19 +718,8 @@ pub enum DriverLaunchAction {
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone)]
-pub enum LogLevel {
-    Error,
-    Warning,
-    Info,
-    Debug,
-    RawEvents,
-}
-
-#[derive(SettingsSchema, Serialize, Deserialize, Clone)]
 pub struct Patches {
-    #[schema(strings(
-        help = "May cause jitter for Nvidia users. AMD users should keep this on. Must be off for Nvidia GPUs!",
-    ))]
+    #[schema(strings(help = "AMD users should keep this on. Must be off for Nvidia GPUs!",))]
     #[schema(flag = "steamvr-restart")]
     pub linux_async_reprojection: bool,
 }
@@ -750,7 +740,8 @@ No action: All driver registration actions should be performed mnually, ALVR inc
     ))]
     pub driver_launch_action: DriverLaunchAction,
 
-    pub notification_level: LogLevel,
+    pub notification_level: LogSeverity,
+    pub show_raw_events: bool,
 
     #[schema(flag = "steamvr-restart")]
     pub capture_frame_dir: String,
@@ -1068,13 +1059,14 @@ pub fn session_settings_default() -> SettingsDefault {
             driver_launch_action: DriverLaunchActionDefault {
                 variant: DriverLaunchActionDefaultVariant::UnregisterOtherDriversAtStartup,
             },
-            notification_level: LogLevelDefault {
+            notification_level: LogSeverityDefault {
                 variant: if cfg!(debug_assertions) {
-                    LogLevelDefaultVariant::Debug
+                    LogSeverityDefaultVariant::Info
                 } else {
-                    LogLevelDefaultVariant::Info
+                    LogSeverityDefaultVariant::Warning
                 },
             },
+            show_raw_events: false,
             capture_frame_dir: if !cfg!(target_os = "linux") {
                 "/tmp".into()
             } else {
