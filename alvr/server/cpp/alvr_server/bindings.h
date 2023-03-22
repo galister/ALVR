@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct FfiFov {
     float left;
     float right;
@@ -20,7 +22,7 @@ struct FfiHandSkeleton {
 };
 
 struct FfiDeviceMotion {
-    unsigned long long deviceID;
+    uint64_t deviceID;
     FfiQuat orientation;
     float position[3];
     float linearVelocity[3];
@@ -38,17 +40,17 @@ enum FfiOpenvrPropertyType {
 };
 
 union FfiOpenvrPropertyValue {
-    bool bool_;
+    uint8_t bool_;
     float float_;
-    int int32;
-    unsigned long long uint64;
+    int32_t int32;
+    uint64_t uint64;
     float vector3[3];
     double double_;
     char string[64];
 };
 
 struct FfiOpenvrProperty {
-    unsigned int key;
+    uint32_t key;
     FfiOpenvrPropertyType type;
     FfiOpenvrPropertyValue value;
 };
@@ -66,14 +68,14 @@ enum FfiButtonType {
 struct FfiButtonValue {
     FfiButtonType type;
     union {
-        bool binary;
+        uint8_t binary;
         float scalar;
     };
 };
 
 struct FfiDynamicEncoderParams {
-    bool updated;
-    unsigned long long bitrate_bps;
+    uint8_t updated;
+    uint64_t bitrate_bps;
     float framerate;
 };
 

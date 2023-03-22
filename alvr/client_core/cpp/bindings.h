@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct FfiViewInput {
     float orientation[4]; // x, y, z, w
     float position[3];
@@ -7,15 +9,15 @@ struct FfiViewInput {
     float fovRight;
     float fovUp;
     float fovDown;
-    unsigned int swapchainIndex;
+    uint32_t swapchainIndex;
 };
 
 struct FfiStreamConfig {
-    unsigned int viewWidth;
-    unsigned int viewHeight;
-    const unsigned int *swapchainTextures[2];
-    unsigned int swapchainLength;
-    bool enableFoveation;
+    uint32_t viewWidth;
+    uint32_t viewHeight;
+    const uint32_t *swapchainTextures[2];
+    uint64_t swapchainLength;
+    uint8_t enableFoveation;
     float foveationCenterSizeX;
     float foveationCenterSizeY;
     float foveationCenterShiftX;
