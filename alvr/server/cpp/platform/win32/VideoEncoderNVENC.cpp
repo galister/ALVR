@@ -130,12 +130,18 @@ void VideoEncoderNVENC::FillEncodeConfig(NV_ENC_INITIALIZE_PARAMS &initializePar
 	// See recommended NVENC settings for low-latency encoding.
 	// https://docs.nvidia.com/video-technologies/video-codec-sdk/nvenc-video-encoder-api-prog-guide/#recommended-nvenc-settings
 	GUID qualityPreset = NV_ENC_PRESET_P1_GUID;
-	if (Settings::Instance().m_encoderQualityPreset == ALVR_QUALITY) {
-		qualityPreset = NV_ENC_PRESET_P7_GUID;
-	} else if (Settings::Instance().m_encoderQualityPreset == ALVR_BALANCED) {
+	if (Settings::Instance().m_nvencQualityPreset == 2) {
+		qualityPreset = NV_ENC_PRESET_P2_GUID;
+	} else if (Settings::Instance().m_nvencQualityPreset == 3) {
+		qualityPreset = NV_ENC_PRESET_P3_GUID;
+	} else if (Settings::Instance().m_nvencQualityPreset == 4) {
 		qualityPreset = NV_ENC_PRESET_P4_GUID;
-	} else if (Settings::Instance().m_encoderQualityPreset == ALVR_SPEED) {
-		qualityPreset = NV_ENC_PRESET_P1_GUID;
+	} else if (Settings::Instance().m_nvencQualityPreset == 5) {
+		qualityPreset = NV_ENC_PRESET_P5_GUID;
+	} else if (Settings::Instance().m_nvencQualityPreset == 6) {
+		qualityPreset = NV_ENC_PRESET_P6_GUID;
+	} else if (Settings::Instance().m_nvencQualityPreset == 7) {
+		qualityPreset = NV_ENC_PRESET_P7_GUID;
 	}
 	NV_ENC_TUNING_INFO tuningPreset = static_cast<NV_ENC_TUNING_INFO>(Settings::Instance().m_nvencTuningPreset);
 
