@@ -218,6 +218,8 @@ class DriverProvider : public vr::IServerTrackedDeviceProvider {
 
                 HapticsSend(id, haptics.fDurationSeconds, haptics.fFrequency, haptics.fAmplitude);
             }
+
+//remove?
 #ifdef __linux__
             else if (event.eventType == vr::VREvent_ChaperoneUniverseHasChanged
                 || event.eventType == vr::VREvent_ChaperoneRoomSetupFinished
@@ -429,7 +431,7 @@ void SetButton(unsigned long long buttonID, FfiButtonValue value) {
 
 void SetChaperoneArea(float areaWidth, float areaHeight) {
     _SetChaperoneArea(areaWidth, areaHeight);
-
+//remove?
 #ifdef __linux__
     if (g_driver_provider.hmd && g_driver_provider.hmd->m_poseHistory) {
         g_driver_provider.hmd->m_poseHistory->SetTransform(GetRawZeroPose());
