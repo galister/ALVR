@@ -692,3 +692,4 @@ pub unsafe extern "C" fn alvr_render_stream_opengl(
         [*swapchain_indices, *swapchain_indices.offset(1)],
     );
 }
+
